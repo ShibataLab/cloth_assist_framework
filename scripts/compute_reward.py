@@ -6,6 +6,7 @@
 
 # import modules
 import cv2
+import rospy
 import argparse
 import numpy as np
 import cPickle as pickle
@@ -19,36 +20,13 @@ nSamples = 200
 termScale = 10.0
 fInds = {'left':range(27,30),'right':range(33,36)}
 
-def computeReward(fileName, modelName, threshName):
-    # load the ee data
-    eeData = np.genfromtxt('%sEE' % (fileName), delimiter=',', skip_header=1)
-    indices = np.linspace(0, eeData.shape[0]-1, num=nSamples, endpoint=True,
-                          dtype=np.int)
-    eeData = eeData[indices,:]
-
-    fData = {'left':np.linalg.norm(eeData[:,fInds['left']], axis=1),
-             'right':np.linalg.norm(eeData[:,fInds['right']], axis=1)}
+def computeReward(fData, threshName, imgData, modelName):
 
     # compute instant reward
     fThresh = pickle.load(open('%s.p' % (threshName), 'rb'))
     errLeft = np.maximum(fData['left']-fThresh['left'][:,0],0)
     errRight = np.maximum(fData['right']-fThresh['right'][:,0],0)
     fReward = np.exp(-(errLeft+errRight))
-
-    # load and process image data
-    imgData = np.zeros((0,imSize**2))
-    capture = cv2.VideoCapture('%sDepth.avi' % (fileName))
-    while True:
-        ret,frame = capture.read()
-        if ret == False:
-            break
-        sFrame = cv2.resize(frame, (imSize,imSize))
-        gFrame = cv2.cvtColor(sFrame, cv2.COLOR_RGB2GRAY)
-        imgData = np.vstack((imgData,gFrame.flatten()))
-    capture.release()
-    indices = np.linspace(0, imgData.shape[0]-1, num=nSamples/2, endpoint=True,
-                          dtype=np.int)
-    imgData = imgData[indices,:]
 
     # estimate img reward
     imgModel = joblib.load('%s.p' % (modelName))
@@ -57,14 +35,7 @@ def computeReward(fileName, modelName, threshName):
 
     # print the reward
     reward = fReward.copy()
-    reward[-1] = imgReward[-1]
-
-    # plot the rewards for the trial
-    plt.figure()
-    plt.plot(np.arange(nSamples), fReward, '-b', label='Force')
-    plt.plot(np.arange(nSamples), imgReward, '-g', label='Visual')
-    plt.legend(loc=0)
-    plt.show()
+    reward[-1] = imgReward
 
     return reward
 
@@ -84,8 +55,41 @@ def main():
     modelName = args.modelname
     threshName = args.threshname
 
+    # load the ee data
+    eeData = np.genfromtxt('%sEE' % (fileName), delimiter=',', skip_header=1)
+    indices = np.linspace(0, eeData.shape[0]-1, num=nSamples, endpoint=True,
+                          dtype=np.int)
+    eeData = eeData[indices,:]
+
+    fData = {'left':np.linalg.norm(eeData[:,fInds['left']], axis=1),
+             'right':np.linalg.norm(eeData[:,fInds['right']], axis=1)}
+
+    # load and process image data
+    imgData = np.zeros((0,imSize**2))
+    capture = cv2.VideoCapture('%sDepth.avi' % (fileName))
+    while True:
+        ret,frame = capture.read()
+        if ret == False:
+            break
+        sFrame = cv2.resize(frame, (imSize,imSize))
+        gFrame = cv2.cvtColor(sFrame, cv2.COLOR_RGB2GRAY)
+        imgData = np.vstack((imgData,gFrame.flatten()))
+    capture.release()
+    indices = np.linspace(0, imgData.shape[0]-1, num=nSamples/2, endpoint=True,
+                          dtype=np.int)
+    imgData = imgData[indices,:]
+
     # call the function
-    reward = computeReward(fileName,modelName,threshName)
+    reward,fReward,imgReward = computeReward(fData,threshName,imgData,modelName)
+
+    # plot the rewards for the trial
+    plt.figure()
+    plt.plot(np.arange(nSamples), fReward, '-b', label='Force')
+    plt.plot(np.arange(nSamples), imgReward, '-g', label='Visual')
+    plt.legend(loc=0)
+    plt.show()
+
+    # save the reward to file
     np.savetxt('%sReward' % fileName, reward, fmt='%.3f', delimiter=',')
 
     return 0
