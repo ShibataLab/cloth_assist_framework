@@ -9,23 +9,20 @@ import cv2
 import argparse
 import numpy as np
 import matplotlib.cm as cm
-from sklearn import neighbors
-from sklearn.externals import joblib
+from dmp_fit import dmpFit
+from play import mapFile, rewindFile
 from matplotlib import pyplot as plt
+from compute_reward import computeReward
 
 nBFS = 50
 nTrajs = 5
 nIters = 50
 nSamples = 200
 
-def powerLearning():
-    # initialize parameters
-    params = dmpParam
-    inputTraj = dmpTraj
-
+def powerLearning(initTraj, initParam, keys):
     # variables for training dmps
+    nParams = params.size
     nDims = inputTraj.shape[1]
-    nParams = dmpParams['input']['JA'].size
 
     # length of episode
     T = 1.0
@@ -54,11 +51,18 @@ def powerLearning():
     dmp.w = np.reshape(currentParam,(nDims,nBFS))
     dmpTraj,_,_ = dmp.rollout()
 
+    # play the initial trajectory
+    threshInd, fReward = mapFile(dmpTraj, keys)
+    time.sleep(2)
+    if threshInd > 0:
+        rewindFile(dmpTraj, keys, threshInd)
+
+    # get reward for initial trajectory
+
     # initialize Q-values for first iteration
     for n in range(nSamples):
-        Q[:-n-1,0] += np.exp(-np.sqrt(np.sum((dmpTraj[n,:]-outputTraj[n,:])**2)))
+        Q[:-n-1,0] +=
     Q[:,0] /= nSamples
-
 
     # loop over the iterations
     for i in range(nIters):
