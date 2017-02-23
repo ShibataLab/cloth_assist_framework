@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(rl_cloth_assist)
+project(cloth_assist_framework)
 
 # Check for c++11 support
 INCLUDE(CheckCXXCompilerFlag)
@@ -56,6 +56,12 @@ target_link_libraries(pose_extractor ${PCL_LIBRARIES} ${catkin_LIBRARIES} ${Open
 
 add_executable(kinect_extractor nodes/kinect_extractor.cpp src/extractor.cpp)
 target_link_libraries(kinect_extractor ${PCL_LIBRARIES} ${catkin_LIBRARIES} ${OpenCV_LIBRARIES} ${kinect2_bridge_LIBRARIES})
+
+add_executable(kinect_recorder nodes/kinect_recorder.cpp src/recorder.cpp)
+target_link_libraries(kinect_recorder ${PCL_LIBRARIES} ${catkin_LIBRARIES} ${OpenCV_LIBRARIES} ${kinect2_bridge_LIBRARIES} -lzmq)
+
+add_executable(sync nodes/sync.cpp)
+target_link_libraries(sync -lzmq)
 
 ## install ##
 install(DIRECTORY include/ DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION} USE_SOURCE_PERMISSIONS)
