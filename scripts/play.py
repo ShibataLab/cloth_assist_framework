@@ -19,58 +19,36 @@ import baxter_interface
 forceThresh = 15
 bufferLength = 10
 
-# function to check if argument is float
-def tryFloat(x):
-    try:
-        return float(x)
-    except ValueError:
-        return None
-
 # function to clean data from CSV file and return joint commands
-def cleanLine(line, names):
-    """Cleans single line of joint position data"""
-    # convert the line to float or None
-    line = [tryFloat(x) for x in line.rstrip().split(',')]
-
+def procLine(line, names):
     # join the joint angle values with names
     combined = zip(names[1:], line[1:])
 
-    # clean the tuples for any none values
-    cleaned = [x for x in combined if x[1] is not None]
-
-    # convert it to a dictionary of valid commands
-    command = dict(cleaned)
+    # convert it to a dictionary i.e. valid commands
+    command = dict(combined)
     leftCommand = dict((key, command[key]) for key in command.keys() if key[:-2] == 'left_')
     rightCommand = dict((key, command[key]) for key in command.keys() if key[:-2] == 'right_')
 
     # return values
-    return(command, leftCommand, rightCommand, line)
+    return leftCommand, rightCommand
 
 # function to read through CSV file and play data
-def mapFile(filename):
+def mapFile(data, keys):
     """Loops through given CSV File"""
 
     # initialize left, right objects from Limb class
     armLeft = baxter_interface.Limb('left')
     armRight = baxter_interface.Limb('right')
+
     armLeft.set_joint_position_speed(0.5)
     armRight.set_joint_position_speed(0.5)
 
     # initialize rate object from rospy Rate class
     rate = rospy.Rate(100)
 
-    # open and read file
-    print("[Baxter] Playing back: %s" % (filename,))
-    with open(filename, 'r') as f:
-        lines = f.readlines()
-
-    # obtain names of columns
-    keys = lines[0].rstrip().split(',')
-
-    print("[Baxter] Moving to Start Position")
-
     # move to start position and start time variable
-    cmdStart, lcmdStart, rcmdStart, rawStart = cleanLine(lines[1], keys)
+    print("[Baxter] Moving to Start Position")
+    lcmdStart, rcmdStart = procLine(data[0,:], keys)
     armLeft.move_to_joint_positions(lcmdStart)
     armRight.move_to_joint_positions(rcmdStart)
     startTime = rospy.get_time()
@@ -80,10 +58,10 @@ def mapFile(filename):
     rightBuffer = []
 
     # play trajectory
-    i = 0
-    for values in lines[1:]:
-        i += 1
-        sys.stdout.write("\r Record %d of %d " % (i, len(lines) - 1))
+    threshInd = 0
+    nSamples = data.shape[0]
+    for i in range(nSamples):
+        sys.stdout.write("\r Record %d of %d " % (i, nSamples-1))
         sys.stdout.flush()
 
         # obtain the end effector efforts
@@ -105,15 +83,15 @@ def mapFile(filename):
         # check for force thresholds
         if forceLeft > forceThresh or forceRight > forceThresh:
             print "Error!! Force threshold exceed Left:%f, Right:%f" % (forceLeft, forceRight)
+            threshInd = i
             break
 
         # parse line for commands
-        cmd, lcmd, rcmd, values = cleanLine(values, keys)
+        lcmd, rcmd = procLine(data[i,:], keys)
 
         # execute these commands if the present time fits with time stamp
         # important implementation detail
-        while (rospy.get_time() - startTime) < values[0]:
-
+        while (rospy.get_time() - startTime) < data[i,0]:
             # if we get the shutdown signal exit function
             if rospy.is_shutdown():
                 print("[Baxter] Aborting - ROS shutdown")
@@ -122,18 +100,52 @@ def mapFile(filename):
             # execute left arm command
             if len(lcmd):
                 armLeft.set_joint_positions(lcmd)
-
-            # execute right arm command
             if len(rcmd):
                 armRight.set_joint_positions(rcmd)
 
             # sleep command
             rate.sleep()
 
-    # print command
-    print
-
     # return True if there is clean exit
+    return threshInd
+
+def rewindFile(data,keys,threshInd):
+    # initialize left, right objects from Limb class
+    armLeft = baxter_interface.Limb('left')
+    armRight = baxter_interface.Limb('right')
+
+    armLeft.set_joint_position_speed(0.5)
+    armRight.set_joint_position_speed(0.5)
+
+    # initialize rate object from rospy Rate class
+    rate = rospy.Rate(100)
+
+    print("[Baxter] Rewinding to Start Position")
+
+    startTime = rospy.get_time()
+    tTrack = data[threshInd,0] - data[:threshInd+1,0]
+
+    for i in range(threshInd,-1,-1):
+        sys.stdout.write("\r Record %d of %d " % (i, threshInd))
+        sys.stdout.flush()
+
+        # parse line for commands
+        lcmd, rcmd = procLine(data[i,:], keys)
+        while (rospy.get_time() - startTime) < tTrack[i]:
+            # if we get the shutdown signal exit function
+            if rospy.is_shutdown():
+                print("[Baxter] Aborting - ROS shutdown")
+                return False
+
+            # execute left arm command
+            if len(lcmd):
+                armLeft.set_joint_positions(lcmd)
+            if len(rcmd):
+                armRight.set_joint_positions(rcmd)
+
+            # sleep command
+                rate.sleep()
+
     return True
 
 # main program
@@ -159,7 +171,8 @@ def main():
     rs = baxter_interface.RobotEnable()
     initState = rs.state().enabled
 
-    # define function for clean exit
+    # define function for clean exitprint keys
+
     def cleanShutdown():
         print("[Baxter] Exiting example")
         if not initState:
@@ -179,7 +192,15 @@ def main():
 
     # if optional argument is given then only play mode is run
     if args.fileName:
-        mapFile(args.fileName)
+        # open and read file
+        data = np.genfromtxt(args.fileName, delimiter=',', names=True)
+        keys = list(data.dtype.names)
+        data = data.view(np.float).reshape(data.shape + (-1,))
+        threshInd = mapFile(data, keys)
+
+        time.sleep(2)
+        if threshInd > 0:
+            rewindFile(data, keys, threshInd)
 
     # if no arguments are given then it will run in sync mode
     else:
@@ -216,11 +237,18 @@ def main():
 
                 # start the mapFile function
                 if playing:
-                    mapFile(playbackFilename)
+                    data = np.genfromtxt(playbackFilename, delimiter=',', names=True)
+                    keys = data.dtype.names
+                    data = data.view(np.float).reshape(data.shape + (-1,))
+                    threshInd = mapFile(data, keys)
 
                 # send the stop playing message
                 socket.send("StoppedPlaying")
                 print "[ZMQ] Sent StoppedPlaying"
+
+                time.sleep(2)
+                if threshInd > 0:
+                    rewindFile(data, keys, threshInd)
 
         # finish
         socket.close()
