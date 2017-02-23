@@ -16,8 +16,8 @@ import argparse
 import numpy as np
 import baxter_interface
 
-forceThresh = 20
-bufferLength = 20
+forceThresh = 15
+bufferLength = 10
 
 # function to check if argument is float
 def tryFloat(x):
@@ -93,8 +93,8 @@ def mapFile(filename):
         fRightRaw = np.linalg.norm([fR.x,fR.y,fR.z])
 
         # append to buffer and compute moving average
-        leftBuffer.append(forceLeft)
-        rightBuffer.append(forceRight)
+        leftBuffer.append(fLeftRaw)
+        rightBuffer.append(fRightRaw)
         if i >= bufferLength:
             leftBuffer.pop(0)
             rightBuffer.pop(0)
