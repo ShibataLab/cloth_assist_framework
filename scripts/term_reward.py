@@ -19,8 +19,9 @@ from cv_bridge import CvBridge, CvBridgeError
 rectX = 130
 rectY = 134
 imSize = 100
+termScale = 20.0
 
-def computeImgReward(modelName,offsetX,offsetY):
+def computeTermReward(modelName,offsetX,offsetY):
     # load the model
     imgModel = joblib.load('%s.p' % (modelName))
 
@@ -33,8 +34,8 @@ def computeImgReward(modelName,offsetX,offsetY):
     rect = img[offsetX:offsetX+imSize,offsetY:offsetY+imSize]
 
     # process rect for model
-    dat = ((rect*255.0)/4096.0).flatten()
-    reward = imgModel.predict(np.atleast_2d(dat))
+    dat = np.atleast_2d(((rect*255.0)/4096.0).flatten()).astype(np.uint8)
+    reward = termScale*imgModel.predict(dat)
 
     return reward[0]
 
@@ -52,7 +53,7 @@ def main():
     modelName = args.modelname
 
     # call the function
-    reward = computeImgReward(modelName,rectX,rectY)
+    dat,reward = computeTermReward(modelName,rectX,rectY)
     print 'Terminal Reward: %f' % (reward)
 
     return 0
