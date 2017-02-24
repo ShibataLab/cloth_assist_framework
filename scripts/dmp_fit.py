@@ -33,7 +33,7 @@ def dmpFit(data, nBFS, param=None):
     dmpTraj = np.concatenate((np.transpose(np.atleast_2d(data[:,0])), dmpTraj),
                              axis=1)
 
-    return dmpTraj, dmpParam
+    return dmp, dmpTraj, dmpParam
 
 def main():
     # add argument parser
@@ -42,7 +42,7 @@ def main():
                         help='Filename to be loaded')
     parser.add_argument('--savename', '-s', type=str, required=True,
                         help='Filename to be saved')
-    parser.add_argument('--bfuncs', '-n', type=int, default=25,
+    parser.add_argument('--bfuncs', '-n', type=int, default=50,
                         help='Number of basis functions in DMP')
 
     args = parser.parse_args()
@@ -59,7 +59,7 @@ def main():
     data = data.view(np.float).reshape(data.shape + (-1,))
 
     # call the function
-    dmpTraj, dmpParam = dmpFit(data, nBFS)
+    dmp, dmpTraj, dmpParam = dmpFit(data, nBFS)
 
     # visualize trajectory
     plotTraj({'Raw':data, 'DMP':dmpTraj}, colors={'Raw':'k', 'DMP':'b'})

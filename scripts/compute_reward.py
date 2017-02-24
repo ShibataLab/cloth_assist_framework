@@ -17,27 +17,26 @@ from matplotlib import pyplot as plt
 
 imSize = 100
 nSamples = 200
-termScale = 10.0
+termScale = 20.0
 fInds = {'left':range(27,30),'right':range(33,36)}
 
-def computeReward(fData, threshName, imgData, modelName):
-
+def computeForceReward(fData, threshName, threshInd=0):
     # compute instant reward
     fThresh = pickle.load(open('%s.p' % (threshName), 'rb'))
     errLeft = np.maximum(fData['left']-fThresh['left'][:,0],0)
     errRight = np.maximum(fData['right']-fThresh['right'][:,0],0)
     fReward = np.exp(-(errLeft+errRight))
 
+    if threshInd > 0:
+        fReward[threshInd:] = 0.0
+    return fReward
+
+def computeImgReward(imgData, modelName):
     # estimate img reward
     imgModel = joblib.load('%s.p' % (modelName))
     imgReward = termScale*imgModel.predict(imgData)
-    imgReward = np.repeat(imgReward,2)
 
-    # print the reward
-    reward = fReward.copy()
-    reward[-1] = imgReward
-
-    return reward
+    return imgReward
 
 def main():
     # add argument parser
@@ -80,7 +79,12 @@ def main():
     imgData = imgData[indices,:]
 
     # call the function
-    reward,fReward,imgReward = computeReward(fData,threshName,imgData,modelName)
+    fReward = computeForceReward(fData,threshName)
+    imgReward = computeImgReward(imgData,modelName)
+    imgReward = np.repeat(imgReward,2)
+
+    reward = fReward.copy()
+    reward[-1] = imgReward[-1]
 
     # plot the rewards for the trial
     plt.figure()

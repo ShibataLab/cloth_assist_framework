@@ -46,6 +46,9 @@ def mapFile(data, keys):
     # initialize rate object from rospy Rate class
     rate = rospy.Rate(100)
 
+    # create numpy array for forces
+    fData = {'left':np.zeros(data.shape[0]),'right':np.zeros(data.shape[0])}
+
     # move to start position and start time variable
     print("[Baxter] Moving to Start Position")
     lcmdStart, rcmdStart = procLine(data[0,:], keys)
@@ -79,6 +82,8 @@ def mapFile(data, keys):
 
         forceLeft = np.asarray(leftBuffer).mean()
         forceRight = np.asarray(rightBuffer).mean()
+        fData['left'][i] = forceLeft
+        fData['right'][i] = forceRight
 
         # check for force thresholds
         if forceLeft > forceThresh or forceRight > forceThresh:
@@ -107,7 +112,7 @@ def mapFile(data, keys):
             rate.sleep()
 
     # return True if there is clean exit
-    return threshInd
+    return threshInd, fData
 
 def rewindFile(data,keys,threshInd):
     # initialize left, right objects from Limb class
@@ -146,6 +151,7 @@ def rewindFile(data,keys,threshInd):
             # sleep command
                 rate.sleep()
 
+    print
     return True
 
 # main program
