@@ -6,23 +6,39 @@
 
 # import modules
 import cv2
+import time
+import rospy
 import argparse
 import numpy as np
 import matplotlib.cm as cm
 from dmp_fit import dmpFit
 from play import mapFile, rewindFile
 from matplotlib import pyplot as plt
-from compute_reward import computeReward
+from term_reward import computeTermReward
+from compute_reward import computeForceReward
 
 nBFS = 50
 nTrajs = 5
-nIters = 50
+rectX = 130
+rectY = 134
+nIters = 10
 nSamples = 200
+modelName = 'rewardModel'
+threshName = 'forceThresh'
 
-def powerLearning(initTraj, initParam, keys):
+def powerLearning(fileName):
+    # load trajectory and keys
+    data = np.genfromtxt(fileName, delimiter=',', names=True)
+
+    keys = list(data.dtype.names)
+    data = data.view(np.float).reshape(data.shape + (-1,))
+
+    # initialize policy
+    dmp, initTraj, initParams = dmpFit(data, nBFS)
+
     # variables for training dmps
-    nParams = params.size
-    nDims = inputTraj.shape[1]
+    nParams = initParams.size
+    nDims = initTraj.shape[1]-1
 
     # length of episode
     T = 1.0
@@ -40,28 +56,29 @@ def powerLearning(initTraj, initParam, keys):
     params = np.zeros((nParams,nIters+1))
 
     # set the exploration variance for parameters
-    std = 10*initParams.mean()*np.ones(nParams)
-    variance = (10*initParams.mean())**2*np.ones((nParams,1))
+    std = 0.5*initParams.mean()*np.ones(nParams)
+    variance = (0.5*initParams.mean())**2*np.ones((nParams,1))
 
     # initialize parameter values
     params[:,0] = initParams.flatten()
 
     # generate dmp trajectory with current parameters
     currentParam = params[:,0]
-    dmp.w = np.reshape(currentParam,(nDims,nBFS))
-    dmpTraj,_,_ = dmp.rollout()
 
     # play the initial trajectory
-    threshInd, fReward = mapFile(dmpTraj, keys)
+    threshInd, fDat = mapFile(initTraj, keys)
     time.sleep(2)
     if threshInd > 0:
-        rewindFile(dmpTraj, keys, threshInd)
+        rewindFile(initTraj, keys, threshInd)
 
     # get reward for initial trajectory
+    reward = computeForceReward(fDat, threshName, threshInd)
+    termReward = computeTermReward(modelName, rectX, rectY)
+    reward[-1] += termReward
 
     # initialize Q-values for first iteration
     for n in range(nSamples):
-        Q[:-n-1,0] +=
+        Q[:-n-1,0] += reward[n]
     Q[:,0] /= nSamples
 
     # loop over the iterations
@@ -88,9 +105,9 @@ def powerLearning(initTraj, initParam, keys):
             tempExplore = (np.ones((nSamples,1))*np.atleast_2d(params[:,np.int(ind)] - currentParam)).T
             tempQ = np.ones((nParams,1))*np.atleast_2d(Q[:,j])
 
-        # update policy parameters
-        paramDNom += np.sum(tempW*tempQ, axis=1)
-        paramNom += np.sum(tempW*tempExplore*tempQ, axis=1)
+            # update policy parameters
+            paramDNom += np.sum(tempW*tempQ, axis=1)
+            paramNom += np.sum(tempW*tempExplore*tempQ, axis=1)
 
         # update policy parameters
         params[:,i+1] = currentParam + paramNom/paramDNom
@@ -103,23 +120,49 @@ def powerLearning(initTraj, initParam, keys):
         # generate rollout from parameters
         dmp.w = np.reshape(params[:,i+1],(nDims,nBFS))
         dmpTraj,_,_ = dmp.rollout()
+        print dmpTraj.shape
+        dmpTraj = np.hstack((np.atleast_2d(initTraj[:,0]).T,dmpTraj))
+        # play trajectory and get reward
+        threshInd, fDat = mapFile(dmpTraj, keys)
+        time.sleep(2)
+        if threshInd > 0:
+            rewindFile(dmpTraj, keys, threshInd)
+
+        reward = computeForceReward(fDat, threshName, threshInd)
+        termReward = computeTermReward(modelName, rectX, rectY)
+        reward[-1] += termReward
 
         # compute final reward
         for n in range(nSamples):
-            Q[:-n-1,i+1] += np.exp(-np.sqrt(np.sum((dmpTraj[n,:]-outputTraj[n,:])**2)))
+            Q[:-n-1,i+1] += reward[n]
         Q[:,i+1] /= nSamples
 
+        print cReturns[i]
+
     cReturns[nIters] = Q[0,nIters]
-    Rewards['PoWER+Q'] = cReturns
 
     # plot the return over rollouts
     plt.figure()
     plt.plot(cReturns,'-b',linewidth=2)
     plt.ylabel('return')
     plt.xlabel('rollouts')
+    plt.show()
 
 def main():
+    # initialize argument parser
+    argFmt = argparse.RawDescriptionHelpFormatter
+    parser = argparse.ArgumentParser(formatter_class = argFmt, description = main.__doc__)
 
+    # add arguments to parser
+    parser.add_argument('-f', '--filename', type = str, help = 'Output Joint Angle Filename')
+
+    # parsing arguments
+    args = parser.parse_args(rospy.myargv()[1:])
+
+    # initialize node with a unique name
+    rospy.init_node("PoWERLearning")
+
+    powerLearning(args.filename)
 
 if __name__ == "__main__":
     main()
