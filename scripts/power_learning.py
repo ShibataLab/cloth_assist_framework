@@ -21,7 +21,7 @@ nBFS = 50
 nTrajs = 5
 rectX = 130
 rectY = 134
-nIters = 10
+nIters = 20
 nSamples = 200
 modelName = 'rewardModel'
 threshName = 'forceThresh'
@@ -33,7 +33,7 @@ def powerLearning(fileName):
     keys = list(data.dtype.names)
     data = data.view(np.float).reshape(data.shape + (-1,))
 
-    # initialize policy
+    # initialize policy by fitting dmp
     dmp, initTraj, initParams = dmpFit(data, nBFS)
 
     # variables for training dmps
@@ -56,8 +56,8 @@ def powerLearning(fileName):
     params = np.zeros((nParams,nIters+1))
 
     # set the exploration variance for parameters
-    std = 0.5*initParams.mean()*np.ones(nParams)
-    variance = (0.5*initParams.mean())**2*np.ones((nParams,1))
+    std = 0.1*initParams.mean()*np.ones(nParams)
+    variance = (0.1*initParams.mean())**2*np.ones((nParams,1))
 
     # initialize parameter values
     params[:,0] = initParams.flatten()
