@@ -13,7 +13,7 @@ import zmq
 import rospy
 import argparse
 import baxter_interface
-from recorder import JointRecorder
+from utility.recorder import JointRecorder
 
 # main program
 def main():

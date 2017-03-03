@@ -36,7 +36,6 @@
   <build_depend>dynamic_reconfigure</build_depend>
   <build_depend>ar_track_alvar_msgs</build_depend>
   <build_depend>robot_state_publisher</build_depend>
-  <build_depend>cloth_assist_interface</build_depend>
   <build_depend>compressed_image_transport</build_depend>
   <build_depend>compressed_depth_image_transport</build_depend>
 
@@ -62,7 +61,6 @@
   <run_depend>dynamic_reconfigure</run_depend>
   <run_depend>ar_track_alvar_msgs</run_depend>
   <run_depend>robot_state_publisher</run_depend>
-  <run_depend>cloth_assist_interface</run_depend>
   <run_depend>compressed_image_transport</run_depend>
   <run_depend>compressed_depth_image_transport</run_depend>
 

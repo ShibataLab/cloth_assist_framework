@@ -5,18 +5,16 @@
 # Date: 2017/02/23
 
 # import modules
-import cv2
 import time
 import rospy
 import argparse
 import numpy as np
-import matplotlib.cm as cm
-from dmp_fit import dmpFit
-from play import mapFile, rewindFile
 from matplotlib import pyplot as plt
-from term_reward import computeTermReward
-from compute_reward import computeForceReward
-from cloth_assist.dmp_discrete import DMPs_discrete
+
+# import reinforcement learning modules
+from rl.policy import initPolicy
+from rl.control import playFile, rewindFile
+from rl.reward import computeForceReward, computeTermReward
 
 # failure detection and reward parameters
 rectX = 130
@@ -33,22 +31,6 @@ nBFS = 50
 dims = range(1,8)
 nDims = len(dims)
 jointMap = np.atleast_2d([-1.0,1.0,-1.0,1.0,-1.0,1.0,-1.0])
-
-def initPolicy(data, nBFS):
-    # set parameters to train dmp
-    nDims = len(dims)
-    dt = 1.0/data.shape[0]
-
-    # setup and train the DMP
-    dmp = DMPs_discrete(dmps=nDims, bfs=nBFS, dt=dt)
-    dmp.imitate_path(y_des=np.transpose(data[:,dims]))
-
-    # generate a rollout from trained DMP
-    dmpParam = dmp.w
-    dmpTraj,_,_ = dmp.rollout()
-    dmpTraj = np.hstack((np.atleast_2d(data[:,0]).T, dmpTraj, dmpTraj*jointMap))
-
-    return dmp, dmpTraj, dmpParam
 
 def powerLearning(fileName):
     # load trajectory and keys

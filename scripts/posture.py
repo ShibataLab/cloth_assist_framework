@@ -2,7 +2,7 @@
 
 # compute_posture.py: code to compute posture of mannequin
 # Author: Nishanth Koganti
-# Date: 2016/06/22
+# Date: 2017/03/02
 # Source: own code
 
 # import modules
@@ -39,14 +39,23 @@ RIGHTSHOULDER = 4
 
 def main():
     '''Program to compute posture of mannequin and plot results'''
+    # parse arguments
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--filename', '-f', type=str, default='posture',
+                        help='Filename with posture click points')
+    parser.add_argument('--savename', '-s', type=str, default='posture.yaml',
+                        help='Filename for saving posture estimation results')
+    parser.add_argument('--calibname', '-c', type=str, default='calibration.yaml',
+                        help='Filename with kinect calibration values')
+    args = parser.parse_args()
+
+    # parsing the arguments
+    postureFile = args.filename
+    resultsFile = args.savename
+    calibrationFile = args.calibname
 
     # initialize ros node
     rospy.init_node('compute_posture')
-
-    # get arguments
-    resultsFile = rospy.get_param('~results_file')
-    postureFile = rospy.get_param('~posture_file')
-    calibrationFile = rospy.get_param('~calibration_file')
 
     # load transformation matrix from yaml file
     with open(calibrationFile, 'r') as f:
