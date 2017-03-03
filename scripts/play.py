@@ -112,6 +112,7 @@ def mapFile(data, keys):
             rate.sleep()
 
     # return True if there is clean exit
+    print
     return threshInd, fData
 
 def rewindFile(data,keys,threshInd):

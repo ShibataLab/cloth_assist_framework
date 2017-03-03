@@ -16,6 +16,7 @@ from play import mapFile, rewindFile
 from matplotlib import pyplot as plt
 from term_reward import computeTermReward
 from compute_reward import computeForceReward
+from cloth_assist.dmp_discrete import DMPs_discrete
 
 # failure detection and reward parameters
 rectX = 130
@@ -61,6 +62,7 @@ def powerLearning(fileName):
 
     # variables for training dmps
     nParams = initParams.size
+    nSamples = initTraj.shape[0]
 
     # length of episode
     T = 1.0
@@ -148,12 +150,8 @@ def powerLearning(fileName):
         # play trajectory and get reward
         threshInd, fDat = mapFile(dmpTraj, keys)
         time.sleep(5)
-        if threshInd > 0:
-            rewindFile(dmpTraj, keys, threshInd)
-            time.sleep(5)
-        else:
-            break
 
+        # compute reward obtained for trajectory
         reward = computeForceReward(fDat, threshName, threshInd)
         termReward = computeTermReward(modelName, rectX, rectY)
         reward[-1] += termReward
@@ -165,6 +163,13 @@ def powerLearning(fileName):
 
         print cReturns[i]
 
+        # rewind trajectory if fail
+        if threshInd > 0:
+            rewindFile(initTraj, keys, threshInd)
+            time.sleep(5)
+        else:
+            break
+
     cReturns[i+1] = Q[0,i+1]
 
     # plot the return over rollouts
@@ -173,6 +178,10 @@ def powerLearning(fileName):
     plt.ylabel('return')
     plt.xlabel('rollouts')
     plt.show()
+
+    # rewind complete trajectory
+    time.sleep(5)
+    rewindFile(initTraj, keys, nSamples-1)
 
 def main():
     # initialize argument parser
