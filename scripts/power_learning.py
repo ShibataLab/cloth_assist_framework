@@ -78,8 +78,8 @@ def powerLearning(fileName):
     params = np.zeros((nParams,nIters+1))
 
     # set the exploration variance for parameters
-    std = 0.1*initParams.mean()*np.ones(nParams)
-    variance = (0.1*initParams.mean())**2*np.ones((nParams,1))
+    std = 0.2*initParams.mean()*np.ones(nParams)
+    variance = (0.2*initParams.mean())**2*np.ones((nParams,1))
 
     # initialize parameter values
     params[:,0] = initParams.flatten()
@@ -89,9 +89,10 @@ def powerLearning(fileName):
 
     # play the initial trajectory
     threshInd, fDat = mapFile(initTraj, keys)
-    time.sleep(2)
+    time.sleep(5)
     if threshInd > 0:
         rewindFile(initTraj, keys, threshInd)
+        time.sleep(5)
 
     # get reward for initial trajectory
     reward = computeForceReward(fDat, threshName, threshInd)
@@ -146,9 +147,12 @@ def powerLearning(fileName):
 
         # play trajectory and get reward
         threshInd, fDat = mapFile(dmpTraj, keys)
-        time.sleep(2)
+        time.sleep(5)
         if threshInd > 0:
             rewindFile(dmpTraj, keys, threshInd)
+            time.sleep(5)
+        else:
+            break
 
         reward = computeForceReward(fDat, threshName, threshInd)
         termReward = computeTermReward(modelName, rectX, rectY)
@@ -161,11 +165,11 @@ def powerLearning(fileName):
 
         print cReturns[i]
 
-    cReturns[nIters] = Q[0,nIters]
+    cReturns[i+1] = Q[0,i+1]
 
     # plot the return over rollouts
     plt.figure()
-    plt.plot(cReturns,'-b',linewidth=2)
+    plt.plot(cReturns[:i+2],'-b',linewidth=2)
     plt.ylabel('return')
     plt.xlabel('rollouts')
     plt.show()
