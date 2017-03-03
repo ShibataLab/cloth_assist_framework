@@ -17,14 +17,37 @@ from matplotlib import pyplot as plt
 from term_reward import computeTermReward
 from compute_reward import computeForceReward
 
-nBFS = 50
-nTrajs = 5
+# failure detection and reward parameters
 rectX = 130
 rectY = 134
-nIters = 20
-nSamples = 200
 modelName = 'rewardModel'
 threshName = 'forceThresh'
+
+# power implementation parameters
+nTrajs = 5
+nIters = 20
+
+# policy parametrization parameters
+nBFS = 50
+dims = range(1,8)
+nDims = len(dims)
+jointMap = np.atleast_2d([-1.0,1.0,-1.0,1.0,-1.0,1.0,-1.0])
+
+def initPolicy(data, nBFS):
+    # set parameters to train dmp
+    nDims = len(dims)
+    dt = 1.0/data.shape[0]
+
+    # setup and train the DMP
+    dmp = DMPs_discrete(dmps=nDims, bfs=nBFS, dt=dt)
+    dmp.imitate_path(y_des=np.transpose(data[:,dims]))
+
+    # generate a rollout from trained DMP
+    dmpParam = dmp.w
+    dmpTraj,_,_ = dmp.rollout()
+    dmpTraj = np.hstack((np.atleast_2d(data[:,0]).T, dmpTraj, dmpTraj*jointMap))
+
+    return dmp, dmpTraj, dmpParam
 
 def powerLearning(fileName):
     # load trajectory and keys
@@ -34,11 +57,10 @@ def powerLearning(fileName):
     data = data.view(np.float).reshape(data.shape + (-1,))
 
     # initialize policy by fitting dmp
-    dmp, initTraj, initParams = dmpFit(data, nBFS)
+    dmp, initTraj, initParams = initPolicy(data, nBFS)
 
     # variables for training dmps
     nParams = initParams.size
-    nDims = initTraj.shape[1]-1
 
     # length of episode
     T = 1.0
@@ -120,8 +142,8 @@ def powerLearning(fileName):
         # generate rollout from parameters
         dmp.w = np.reshape(params[:,i+1],(nDims,nBFS))
         dmpTraj,_,_ = dmp.rollout()
-        print dmpTraj.shape
-        dmpTraj = np.hstack((np.atleast_2d(initTraj[:,0]).T,dmpTraj))
+        dmpTraj = np.hstack((np.atleast_2d(initTraj[:,0]).T, dmpTraj, dmpTraj*jointMap))
+
         # play trajectory and get reward
         threshInd, fDat = mapFile(dmpTraj, keys)
         time.sleep(2)
