@@ -252,7 +252,7 @@ void Extractor::windowCalibrate()
   }
   else
   {
-    m_window = cv::Rect(143, 116, WINDOWSIZE, WINDOWSIZE);
+    m_window = cv::Rect(134, 134, WINDOWSIZE, WINDOWSIZE);
   }
 }
 

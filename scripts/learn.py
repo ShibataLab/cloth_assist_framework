@@ -9,6 +9,7 @@ import time
 import rospy
 import argparse
 import numpy as np
+import cPickle as pickle
 from matplotlib import pyplot as plt
 
 # import reinforcement learning modules
@@ -62,8 +63,8 @@ def powerLearning(fileName):
     params = np.zeros((nParams,nIters+1))
 
     # set the exploration variance for parameters
-    std = 0.2*initParams.mean()*np.ones(nParams)
-    variance = (0.2*initParams.mean())**2*np.ones((nParams,1))
+    std = 0.1*initParams.mean()*np.ones(nParams)
+    variance = (0.1*initParams.mean())**2*np.ones((nParams,1))
 
     # initialize parameter values
     params[:,0] = initParams.flatten()
@@ -77,8 +78,8 @@ def powerLearning(fileName):
 
     # get reward for initial trajectory
     reward = computeForceReward(fDat, threshName, threshInd)
-    termReward = computeTermReward(rectX, rectY, modelName)
-    reward[-1] += termReward
+    termReward, termDat = computeTermReward(rectX, rectY, modelName)
+    reward[threshInd] += termReward
 
     # rewind trajectory
     if threshInd > 0:
@@ -89,6 +90,15 @@ def powerLearning(fileName):
     for n in range(nSamples):
         Q[:-n-1,0] += reward[n]
     Q[:,0] /= nSamples
+
+    # save the results for initialization
+    results = {}
+    results['force'] = fDat
+    results['qval'] = Q[:,0]
+    results['term'] = termDat
+    results['traj'] = initTraj
+    results['reward'] = reward
+    pickle.dump(results,open('Iter0.p','wb'))
 
     # loop over the iterations
     for i in range(nIters):
@@ -137,15 +147,21 @@ def powerLearning(fileName):
 
         # compute reward obtained for trajectory
         reward = computeForceReward(fDat, threshName, threshInd)
-        termReward = computeTermReward(rectX, rectY, modelName)
-        reward[-1] += termReward
+        termReward, termDat = computeTermReward(rectX, rectY, modelName)
+        reward[threshInd] += termReward
 
         # compute final reward
         for n in range(nSamples):
             Q[:-n-1,i+1] += reward[n]
         Q[:,i+1] /= nSamples
 
-        print cReturns[i]
+        results = {}
+        results['force'] = fDat
+        results['term'] = termDat
+        results['traj'] = dmpTraj
+        results['qval'] = Q[:,i+1]
+        results['reward'] = reward
+        pickle.dump(results,open('Iter%d.p' % (i+1),'wb'))
 
         # rewind trajectory if fail
         if threshInd > 0:
