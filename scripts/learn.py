@@ -17,10 +17,10 @@ from rl.control import playFile, rewindFile
 from rl.reward import computeForceReward, computeTermReward
 
 # failure detection and reward parameters
-rectX = 130
+rectX = 132
 rectY = 134
-modelName = 'rewardModel'
-threshName = 'forceThresh'
+modelName = 'rewardModel.p'
+threshName = 'forceThresh.p'
 
 # power implementation parameters
 nTrajs = 5
@@ -72,16 +72,18 @@ def powerLearning(fileName):
     currentParam = params[:,0]
 
     # play the initial trajectory
-    threshInd, fDat = mapFile(initTraj, keys)
-    time.sleep(5)
-    if threshInd > 0:
-        rewindFile(initTraj, keys, threshInd)
-        time.sleep(5)
+    threshInd, fDat = playFile(initTraj, keys)
+    time.sleep(2)
 
     # get reward for initial trajectory
     reward = computeForceReward(fDat, threshName, threshInd)
-    termReward = computeTermReward(modelName, rectX, rectY)
+    termReward = computeTermReward(rectX, rectY, modelName)
     reward[-1] += termReward
+
+    # rewind trajectory
+    if threshInd > 0:
+        rewindFile(initTraj, keys, threshInd)
+        time.sleep(5)
 
     # initialize Q-values for first iteration
     for n in range(nSamples):
@@ -130,12 +132,12 @@ def powerLearning(fileName):
         dmpTraj = np.hstack((np.atleast_2d(initTraj[:,0]).T, dmpTraj, dmpTraj*jointMap))
 
         # play trajectory and get reward
-        threshInd, fDat = mapFile(dmpTraj, keys)
-        time.sleep(5)
+        threshInd, fDat = playFile(dmpTraj, keys)
+        time.sleep(2)
 
         # compute reward obtained for trajectory
         reward = computeForceReward(fDat, threshName, threshInd)
-        termReward = computeTermReward(modelName, rectX, rectY)
+        termReward = computeTermReward(rectX, rectY, modelName)
         reward[-1] += termReward
 
         # compute final reward
@@ -160,10 +162,6 @@ def powerLearning(fileName):
     plt.ylabel('return')
     plt.xlabel('rollouts')
     plt.show()
-
-    # rewind complete trajectory
-    time.sleep(5)
-    rewindFile(initTraj, keys, nSamples-1)
 
 def main():
     # initialize argument parser

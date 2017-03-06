@@ -26,7 +26,7 @@ def procLine(line, names):
     return leftCommand, rightCommand
 
 # function to read through CSV file and play data
-def playFile(data, keys, forceThresh=15.0, bufferLength=10):
+def playFile(data, keys, threshMode=1, forceThresh=15.0, bufferLength=10):
     """Loops through given CSV File"""
 
     # initialize left, right objects from Limb class
@@ -79,7 +79,7 @@ def playFile(data, keys, forceThresh=15.0, bufferLength=10):
         fData['right'][i] = forceRight
 
         # check for force thresholds
-        if forceLeft > forceThresh or forceRight > forceThresh:
+        if threshMode & (forceLeft > forceThresh or forceRight > forceThresh):
             print "Error!! Force threshold exceed Left:%f, Right:%f" % (forceLeft, forceRight)
             threshInd = i
             break

@@ -63,11 +63,7 @@ def main():
         data = np.genfromtxt(args.fileName, delimiter=',', names=True)
         keys = list(data.dtype.names)
         data = data.view(np.float).reshape(data.shape + (-1,))
-        threshInd = playFile(data, keys)
-
-        time.sleep(2)
-        if threshInd > 0:
-            rewindFile(data, keys, threshInd)
+        playFile(data, keys, threshMode=0)
 
     # if no arguments are given then it will run in sync mode
     else:
@@ -107,15 +103,11 @@ def main():
                     data = np.genfromtxt(playbackFilename, delimiter=',', names=True)
                     keys = data.dtype.names
                     data = data.view(np.float).reshape(data.shape + (-1,))
-                    threshInd = playFile(data, keys)
+                    playFile(data, keys, threshMode=0)
 
                 # send the stop playing message
                 socket.send("StoppedPlaying")
                 print "[ZMQ] Sent StoppedPlaying"
-
-                time.sleep(2)
-                if threshInd > 0:
-                    rewindFile(data, keys, threshInd)
 
         # finish
         socket.close()
