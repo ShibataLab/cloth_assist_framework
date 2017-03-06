@@ -12,6 +12,7 @@ import time
 import rospy
 import argparse
 import numpy as np
+import baxter_interface
 from rl.control import playFile, rewindFile
 
 # main program
@@ -62,7 +63,7 @@ def main():
         data = np.genfromtxt(args.fileName, delimiter=',', names=True)
         keys = list(data.dtype.names)
         data = data.view(np.float).reshape(data.shape + (-1,))
-        threshInd = mapFile(data, keys)
+        threshInd = playFile(data, keys)
 
         time.sleep(2)
         if threshInd > 0:
@@ -101,12 +102,12 @@ def main():
                     playing = True
                     time.sleep(0.2)
 
-                # start the mapFile function
+                # start the playFile function
                 if playing:
                     data = np.genfromtxt(playbackFilename, delimiter=',', names=True)
                     keys = data.dtype.names
                     data = data.view(np.float).reshape(data.shape + (-1,))
-                    threshInd = mapFile(data, keys)
+                    threshInd = playFile(data, keys)
 
                 # send the stop playing message
                 socket.send("StoppedPlaying")
