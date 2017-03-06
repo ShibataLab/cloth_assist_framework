@@ -12,6 +12,7 @@ import time
 import rospy
 import argparse
 import numpy as np
+import baxter_interface
 from rl.control import playFile, rewindFile
 
 # main program
