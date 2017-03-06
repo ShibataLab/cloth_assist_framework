@@ -52,10 +52,10 @@ def playFile(data, keys, threshMode=1, forceThresh=15.0, bufferLength=10):
     # create buffers for left and right force
     leftBuffer = []
     rightBuffer = []
+    nSamples = data.shape[0]
 
     # play trajectory
-    threshInd = 0
-    nSamples = data.shape[0]
+    threshInd = nSamples
     for i in range(nSamples):
         sys.stdout.write("\r Record %d of %d " % (i, nSamples-1))
         sys.stdout.flush()
@@ -108,7 +108,7 @@ def playFile(data, keys, threshMode=1, forceThresh=15.0, bufferLength=10):
     print
     return threshInd, fData
 
-def rewindFile(data,keys,threshInd):
+def rewindFile(data, keys, threshInd):
     # initialize left, right objects from Limb class
     armLeft = baxter_interface.Limb('left')
     armRight = baxter_interface.Limb('right')

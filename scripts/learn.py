@@ -13,6 +13,7 @@ import cPickle as pickle
 from matplotlib import pyplot as plt
 
 # import reinforcement learning modules
+from rl.power import PowerAgent
 from rl.policy import initPolicy
 from rl.control import playFile, rewindFile
 from rl.reward import computeForceReward, computeTermReward
@@ -20,65 +21,44 @@ from rl.reward import computeForceReward, computeTermReward
 # failure detection and reward parameters
 rectX = 132
 rectY = 134
+forceRate = 5.0
+termScale = 100.0
 modelName = 'rewardModel.p'
 threshName = 'forceThresh.p'
 
 # power implementation parameters
 nTrajs = 5
 nIters = 20
+nSamples = 400
 
 # policy parametrization parameters
-nBFS = 50
+nBFs = 25
 dims = range(1,8)
 nDims = len(dims)
 jointMap = np.atleast_2d([-1.0,1.0,-1.0,1.0,-1.0,1.0,-1.0])
 
-def powerLearning(fileName):
-    # load trajectory and keys
+def learn(fileName):
+    # load initial trajectory
     data = np.genfromtxt(fileName, delimiter=',', names=True)
 
     keys = list(data.dtype.names)
     data = data.view(np.float).reshape(data.shape + (-1,))
 
     # initialize policy by fitting dmp
-    dmp, initTraj, initParams = initPolicy(data, nBFS)
+    dmp, initTraj, initParams = initPolicy(data, nBFs)
+    basis = dmp.gen_psi(dmp.cs.rollout())
 
-    # variables for training dmps
-    nParams = initParams.size
-    nSamples = initTraj.shape[0]
-
-    # length of episode
-    T = 1.0
-    dT = T/nSamples
-
-    # variable for cumilative rewards
-    cReturns = np.zeros(nIters+1)
-    sReturns = np.zeros((nIters+1,2))
-
-    # additional parameters for Q-value function
-    Q = np.zeros((nSamples,nIters+1))
-    basis = np.tile(dmp.gen_psi(dmp.cs.rollout()),(1,nDims))
-
-    # store parameter values for all iterations
-    params = np.zeros((nParams,nIters+1))
-
-    # set the exploration variance for parameters
-    std = 0.1*initParams.mean()*np.ones(nParams)
-    variance = (0.1*initParams.mean())**2*np.ones((nParams,1))
-
-    # initialize parameter values
-    params[:,0] = initParams.flatten()
-
-    # generate dmp trajectory with current parameters
-    currentParam = params[:,0]
+    # initialize power agent
+    agent = PowerAgent(initParams, basis, nIters, nSamples, nTrajs)
+    cReturns = np.zeros(nIters)
 
     # play the initial trajectory
     threshInd, fDat = playFile(initTraj, keys)
-    time.sleep(2)
+    time.sleep(5)
 
     # get reward for initial trajectory
-    reward = computeForceReward(fDat, threshName, threshInd)
-    termReward, termDat = computeTermReward(rectX, rectY, modelName)
+    reward = computeForceReward(fDat, forceRate, threshName, threshInd)
+    termReward, termDat = computeTermReward(rectX, rectY, termScale, modelName)
     reward[threshInd] += termReward
 
     # rewind trajectory
@@ -86,81 +66,45 @@ def powerLearning(fileName):
         rewindFile(initTraj, keys, threshInd)
         time.sleep(5)
 
-    # initialize Q-values for first iteration
-    for n in range(nSamples):
-        Q[:-n-1,0] += reward[n]
-    Q[:,0] /= nSamples
+    # update agent based on rewards observed
+    cReturns[0] = agent.update(reward)
 
     # save the results for initialization
     results = {}
     results['force'] = fDat
-    results['qval'] = Q[:,0]
     results['term'] = termDat
     results['traj'] = initTraj
     results['reward'] = reward
+    results['qval'] = agent.Q[:,0]
     pickle.dump(results,open('Iter0.p','wb'))
 
     # loop over the iterations
-    for i in range(nIters):
-        # compute reward for the trial
-        cReturns[i] = Q[0,i]
-
-        # update the sorted returns table
-        sReturns[0,:] = np.asarray([i,cReturns[i]])
-        sReturns = sReturns[sReturns[:,1].argsort()]
-
-        # update to policy parameters
-        paramNom = np.zeros(nParams)
-        paramDNom = 1e-10*np.ones(nParams)
-
-        # loop over best iterations
-        for j in range(np.min((i,nTrajs))):
-            # get the cost
-            ind = sReturns[-1-j,0]
-            cost = sReturns[-1-j,1]
-
-            # compute temporary basis function values
-            tempW = ((basis**2)/(np.atleast_2d(np.sum(((basis**2)*(np.ones((nSamples,1))*variance.T)),axis=1)).T*np.ones((1,nParams)))).T
-            tempExplore = (np.ones((nSamples,1))*np.atleast_2d(params[:,np.int(ind)] - currentParam)).T
-            tempQ = np.ones((nParams,1))*np.atleast_2d(Q[:,j])
-
-            # update policy parameters
-            paramDNom += np.sum(tempW*tempQ, axis=1)
-            paramNom += np.sum(tempW*tempExplore*tempQ, axis=1)
-
-        # update policy parameters
-        params[:,i+1] = currentParam + paramNom/paramDNom
-        currentParam = params[:,i+1]
-
-        # add exploration noise to next parameter set
-        if i != nIters-1:
-            params[:,i+1] = params[:,i+1] + std*np.random.randn(nParams)
+    for i in range(nIters-1):
+        # sample from the agent
+        dmp.w = agent.sample()
 
         # generate rollout from parameters
-        dmp.w = np.reshape(params[:,i+1],(nDims,nBFS))
         dmpTraj,_,_ = dmp.rollout()
         dmpTraj = np.hstack((np.atleast_2d(initTraj[:,0]).T, dmpTraj, dmpTraj*jointMap))
 
         # play trajectory and get reward
         threshInd, fDat = playFile(dmpTraj, keys)
-        time.sleep(2)
+        time.sleep(5)
 
         # compute reward obtained for trajectory
-        reward = computeForceReward(fDat, threshName, threshInd)
-        termReward, termDat = computeTermReward(rectX, rectY, modelName)
+        reward = computeForceReward(fDat, threshInd, threshName, forceRate)
+        termReward, termDat = computeTermReward(rectX, rectY, termScale, modelName)
         reward[threshInd] += termReward
 
-        # compute final reward
-        for n in range(nSamples):
-            Q[:-n-1,i+1] += reward[n]
-        Q[:,i+1] /= nSamples
+        # update the agent
+        cReturns[i+1] = agent.update(reward)
 
         results = {}
         results['force'] = fDat
         results['term'] = termDat
         results['traj'] = dmpTraj
-        results['qval'] = Q[:,i+1]
         results['reward'] = reward
+        results['qval'] = agent.Q[:,i+1]
         pickle.dump(results,open('Iter%d.p' % (i+1),'wb'))
 
         # rewind trajectory if fail
@@ -170,11 +114,9 @@ def powerLearning(fileName):
         else:
             break
 
-    cReturns[i+1] = Q[0,i+1]
-
     # plot the return over rollouts
     plt.figure()
-    plt.plot(cReturns[:i+2],'-b',linewidth=2)
+    plt.plot(cReturns[:i+1],'-b',linewidth=2)
     plt.ylabel('return')
     plt.xlabel('rollouts')
     plt.show()
@@ -191,9 +133,8 @@ def main():
     args = parser.parse_args(rospy.myargv()[1:])
 
     # initialize node with a unique name
-    rospy.init_node("PoWERLearning")
-
-    powerLearning(args.filename)
+    rospy.init_node("Learn")
+    learn(args.filename)
 
 if __name__ == "__main__":
     main()

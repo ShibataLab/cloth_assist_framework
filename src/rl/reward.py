@@ -16,24 +16,24 @@ from cv_bridge import CvBridge, CvBridgeError
 imSize = 100
 cutSize = 250
 
-def computeForceReward(fData, threshName='forceThresh.p', threshInd=0):
+def computeForceReward(fData, threshInd, threshName, forceRate):
     # compute instant reward
     fThresh = pickle.load(open(threshName, 'rb'))
     errLeft = np.maximum(fData['left']-fThresh['left'][:,0],0)
     errRight = np.maximum(fData['right']-fThresh['right'][:,0],0)
-    fReward = np.exp(-(errLeft+errRight))
+    fReward = np.exp(-forceRate*(errLeft+errRight))
 
-    if threshInd > 0:
-        fReward[threshInd:] = 0.0
+    if threshInd < nSamples-1:
+        fReward[threshInd+1:] = 0.0
     return fReward
 
-def computeImgReward(imgData, modelName='rewardModel.p', termScale=200.0):
+def computeImgReward(imgData, termScale, modelName='rewardModel.p'):
     # estimate img reward
     imgModel = joblib.load(modelName)
     imgReward = termScale*imgModel.predict(imgData)
     return imgReward
 
-def computeTermReward(offsetX, offsetY, modelName='rewardModel.p', termScale=200.0):
+def computeTermReward(offsetX, offsetY, termScale, modelName='rewardModel.p'):
     # get img message
     msg = rospy.wait_for_message("/kinect2/sd/image_depth_rect", Image, timeout=2)
     msg2 = rospy.wait_for_message("/kinect2/sd/image_color_rect", Image, timeout=2)
