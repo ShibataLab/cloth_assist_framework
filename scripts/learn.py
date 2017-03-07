@@ -32,17 +32,29 @@ nIters = 20
 nSamples = 400
 
 # policy parametrization parameters
-nBFs = 25
+nBFs = 50
 dims = range(1,8)
 nDims = len(dims)
 jointMap = np.atleast_2d([-1.0,1.0,-1.0,1.0,-1.0,1.0,-1.0])
 
-def learn(fileName):
+def moving_average(a, n=3) :
+    ret = np.cumsum(a, axis=0, dtype=float)
+    ret[n:,:] = ret[n:,:] - ret[:-n,:]
+    return ret[n - 1:,:] / n
+
+def learn(fileName, forceName):
     # load initial trajectory
     data = np.genfromtxt(fileName, delimiter=',', names=True)
 
     keys = list(data.dtype.names)
     data = data.view(np.float).reshape(data.shape + (-1,))
+
+    # load initial trajectory
+    fData = np.genfromtxt('../Initialization/teachProcCEE', delimiter=',', skiprows=1)
+
+    # compute force thresholds
+    fThresh = {'left':moving_average(np.atleast_2d(np.linalg.norm(fData[:,27:30],axis=1)).T, n=10),
+               'right':moving_average(np.atleast_2d(np.linalg.norm(fData[:,33:36],axis=1)).T, n=10)}
 
     # initialize policy by fitting dmp
     dmp, initTraj, initParams = initPolicy(data, nBFs)
@@ -53,11 +65,11 @@ def learn(fileName):
     cReturns = np.zeros(nIters)
 
     # play the initial trajectory
-    threshInd, fDat = playFile(initTraj, keys)
+    threshInd, fDat = playFile(initTraj, keys, threshMode=1, fThresh=fThresh)
     time.sleep(5)
 
     # get reward for initial trajectory
-    reward = computeForceReward(fDat, forceRate, threshName, threshInd)
+    reward = computeForceReward(fDat, threshInd, threshName, forceRate)
     termReward, termDat = computeTermReward(rectX, rectY, termScale, modelName)
     reward[threshInd] += termReward
 
@@ -88,7 +100,7 @@ def learn(fileName):
         dmpTraj = np.hstack((np.atleast_2d(initTraj[:,0]).T, dmpTraj, dmpTraj*jointMap))
 
         # play trajectory and get reward
-        threshInd, fDat = playFile(dmpTraj, keys)
+        threshInd, fDat = playFile(dmpTraj, keys, threshMode=1, fThresh=fThresh)
         time.sleep(5)
 
         # compute reward obtained for trajectory
@@ -127,14 +139,15 @@ def main():
     parser = argparse.ArgumentParser(formatter_class = argFmt, description = main.__doc__)
 
     # add arguments to parser
-    parser.add_argument('-f', '--filename', type = str, help = 'Output Joint Angle Filename')
+    parser.add_argument('-t', '--trajname', type = str, help = 'Trajectory Filename')
+    parser.add_argument('-f', '--forcename', type = str, help = 'Force Data Filename')
 
     # parsing arguments
     args = parser.parse_args(rospy.myargv()[1:])
 
     # initialize node with a unique name
     rospy.init_node("Learn")
-    learn(args.filename)
+    learn(args.trajname, args.forcename)
 
 if __name__ == "__main__":
     main()

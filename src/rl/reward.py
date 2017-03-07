@@ -16,9 +16,9 @@ from cv_bridge import CvBridge, CvBridgeError
 imSize = 100
 cutSize = 250
 
-def computeForceReward(fData, threshInd, threshName, forceRate):
+def computeForceReward(fData, threshInd, fThresh, forceRate):
     # compute instant reward
-    fThresh = pickle.load(open(threshName, 'rb'))
+    nSamples = fData['left'].shape[0]
     errLeft = np.maximum(fData['left']-fThresh['left'][:,0],0)
     errRight = np.maximum(fData['right']-fThresh['right'][:,0],0)
     fReward = np.exp(-forceRate*(errLeft+errRight))
@@ -36,18 +36,17 @@ def computeImgReward(imgData, termScale, modelName='rewardModel.p'):
 def computeTermReward(offsetX, offsetY, termScale, modelName='rewardModel.p'):
     # get img message
     msg = rospy.wait_for_message("/kinect2/sd/image_depth_rect", Image, timeout=2)
-    msg2 = rospy.wait_for_message("/kinect2/sd/image_color_rect", Image, timeout=2)
+    msg2 = rospy.wait_for_message("/kinect2/qhd/image_color_rect", Image, timeout=2)
 
     # convert msg to mat
     bridge = CvBridge()
     img = bridge.imgmsg_to_cv2(msg, msg.encoding)
     img2 = bridge.imgmsg_to_cv2(msg2, msg2.encoding)
-    rect = img[offsetX:offsetX+cutSize,offsetY:offsetY+cutSize]
-    rect2 = img2[offsetX:offsetX+cutSize,offsetY:offsetY+cutSize]
 
+    rect = img[offsetX:offsetX+cutSize,offsetY:offsetY+cutSize]
     frame = cv2.resize(rect, (imSize,imSize))
-    frame2 = cv2.resize(rect2, (imSize,imSize))
-    color = cv2.cvtColor(frame2, cv2.COLOR_BGR2RGB)
+
+    color = cv2.cvtColor(img2, cv2.COLOR_BGR2RGB)
 
     # process rect for model
     dat = np.atleast_2d(((frame*255.0)/4096.0).flatten()).astype(np.uint8)

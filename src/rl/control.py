@@ -11,6 +11,7 @@ import time
 import rospy
 import numpy as np
 import baxter_interface
+import cPickle as pickle
 
 # function to clean data from CSV file and return joint commands
 def procLine(line, names):
@@ -26,7 +27,8 @@ def procLine(line, names):
     return leftCommand, rightCommand
 
 # function to read through CSV file and play data
-def playFile(data, keys, threshMode=1, forceThresh=15.0, bufferLength=10):
+def playFile(data, keys, threshMode=0, fThresh=None,
+             forceThresh=2.0, bufferLength=10):
     """Loops through given CSV File"""
 
     # initialize left, right objects from Limb class
@@ -40,6 +42,7 @@ def playFile(data, keys, threshMode=1, forceThresh=15.0, bufferLength=10):
     rate = rospy.Rate(100)
 
     # create numpy array for forces
+    fThresh = pickle.load(open(threshName, 'rb'))
     fData = {'left':np.zeros(data.shape[0]),'right':np.zeros(data.shape[0])}
 
     # move to start position and start time variable
@@ -55,7 +58,7 @@ def playFile(data, keys, threshMode=1, forceThresh=15.0, bufferLength=10):
     nSamples = data.shape[0]
 
     # play trajectory
-    threshInd = nSamples
+    threshInd = nSamples-1
     for i in range(nSamples):
         sys.stdout.write("\r Record %d of %d " % (i, nSamples-1))
         sys.stdout.flush()
@@ -79,7 +82,8 @@ def playFile(data, keys, threshMode=1, forceThresh=15.0, bufferLength=10):
         fData['right'][i] = forceRight
 
         # check for force thresholds
-        if threshMode & (forceLeft > forceThresh or forceRight > forceThresh):
+        if threshMode and (forceLeft > fThresh['left'][i,0]+forceThresh or
+                           forceRight > fThresh['right'][i,0]+forceThresh):
             print "Error!! Force threshold exceed Left:%f, Right:%f" % (forceLeft, forceRight)
             threshInd = i
             break

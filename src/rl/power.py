@@ -33,8 +33,8 @@ class PowerAgent(object):
         self.params = np.zeros((self.nParams, self.nIters))
 
         # set the exploration variance for parameters
-        self.std = 0.1*initParams.mean()*np.ones(self.nParams)
-        self.variance = (0.1*initParams.mean())**2*np.ones((self.nParams, 1))
+        self.std = 0.2*initParams.mean()*np.ones(self.nParams)
+        self.variance = (0.2*initParams.mean())**2*np.ones((self.nParams, 1))
 
         # set the parameters for current iteration
         self.params[:,0] = initParams.flatten()
