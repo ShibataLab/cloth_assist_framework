@@ -83,9 +83,33 @@ class PowerAgent(object):
         self.params[:,self.iter] = self.currentParam + paramNom/paramDNom
         self.currentParam = self.params[:,self.iter]
 
+        # update variance parameters
+        if self.iter > 1:
+            varNom = np.zeros(self.nParams)
+            varDNom = 1e-10*np.ones(self.nParams)
+
+            # loop over best iterations
+            for j in range(np.min((self.iter,self.nIters/2))):
+                # get the best trajectories
+                ind = self.sReturns[-1-j,0]
+
+                # compute temporary basis function values
+                tempExplore = (np.ones((self.nSamples,1))*np.atleast_2d(self.params[:,np.int(ind)] - self.currentParam)).T
+                tempQ = np.ones((self.nParams,1))*np.atleast_2d(self.Q[:,j])
+
+                # update variance parameters
+                varDNom += np.sum(tempQ, axis=1)
+                varNom += np.sum(tempExplore**2*tempQ, axis=1)
+
+            # limit the variance that is produced
+            varParams = np.minimum(np.maximum(varNom/varDNom,0.5*self.variance), 2.0*self.variance)
+        else:
+            varParams = self.variance
+
         # add exploration noise to next parameter set
-        if self.iter%self.nTrajs != 0:
-            self.params[:,self.iter] = self.params[:,self.iter] + self.std*np.random.randn(self.nParams)
+        if self.iter != self.nIter-1:
+            self.params[:,self.iter] = self.params[:,self.iter] + \
+            np.sqrt(self.variance)*np.random.randn(self.nParams)
         else:
             print 'Policy Evaluation!'
         return self.params[:,self.iter].reshape((self.nDims,self.nBFs))
