@@ -28,7 +28,7 @@ def procLine(line, names):
 
 # function to read through CSV file and play data
 def playFile(data, keys, threshMode=0, fThresh=None,
-             forceThresh=2.0, bufferLength=10):
+             forceThresh=2.0, fPass=6.0,  bufferLength=10):
     """Loops through given CSV File"""
 
     # initialize left, right objects from Limb class
@@ -42,7 +42,6 @@ def playFile(data, keys, threshMode=0, fThresh=None,
     rate = rospy.Rate(100)
 
     # create numpy array for forces
-    fThresh = pickle.load(open(threshName, 'rb'))
     fData = {'left':np.zeros(data.shape[0]),'right':np.zeros(data.shape[0])}
 
     # move to start position and start time variable
@@ -82,11 +81,13 @@ def playFile(data, keys, threshMode=0, fThresh=None,
         fData['right'][i] = forceRight
 
         # check for force thresholds
-        if threshMode and (forceLeft > fThresh['left'][i,0]+forceThresh or
-                           forceRight > fThresh['right'][i,0]+forceThresh):
-            print "Error!! Force threshold exceed Left:%f, Right:%f" % (forceLeft, forceRight)
-            threshInd = i
-            break
+        if threshMode and forceLeft > fPass and forceRight > fPass:
+            if forceLeft > fThresh['left'][i,0]+forceThresh or \
+               forceRight > fThresh['right'][i,0]+forceThresh:
+                print "Error!! Force threshold exceed Left:%f,%f, Right:%f,%f" %\
+                (forceLeft, fThresh['left'][i,0], forceRight, fThresh['right'][i,0])
+                threshInd = i
+                break
 
         # parse line for commands
         lcmd, rcmd = procLine(data[i,:], keys)
@@ -117,8 +118,8 @@ def rewindFile(data, keys, threshInd):
     armLeft = baxter_interface.Limb('left')
     armRight = baxter_interface.Limb('right')
 
-    armLeft.set_joint_position_speed(0.5)
-    armRight.set_joint_position_speed(0.5)
+    armLeft.set_joint_position_speed(0.6)
+    armRight.set_joint_position_speed(0.6)
 
     # initialize rate object from rospy Rate class
     rate = rospy.Rate(100)

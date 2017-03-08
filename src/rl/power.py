@@ -13,7 +13,8 @@ import cPickle as pickle
 from matplotlib import pyplot as plt
 
 class PowerAgent(object):
-    def __init__(self, initParams, basis, nIters=20, nSamples = 400, nTrajs=5):
+    def __init__(self, initParams, basis, nIters=20, nSamples = 400,
+                 nTrajs=5, explParam=0.2):
         # initialize parameters
         self.nIters = nIters
         self.nTrajs = nTrajs
@@ -33,8 +34,8 @@ class PowerAgent(object):
         self.params = np.zeros((self.nParams, self.nIters))
 
         # set the exploration variance for parameters
-        self.std = 0.2*initParams.mean()*np.ones(self.nParams)
-        self.variance = (0.2*initParams.mean())**2*np.ones((self.nParams, 1))
+        self.std = explParam*initParams.mean()*np.ones(self.nParams)
+        self.variance = (explParam*initParams.mean())**2*np.ones((self.nParams, 1))
 
         # set the parameters for current iteration
         self.params[:,0] = initParams.flatten()
@@ -83,7 +84,8 @@ class PowerAgent(object):
         self.currentParam = self.params[:,self.iter]
 
         # add exploration noise to next parameter set
-        if self.iter != self.nIters-1:
+        if self.iter%self.nTrajs != 0:
             self.params[:,self.iter] = self.params[:,self.iter] + self.std*np.random.randn(self.nParams)
-
+        else:
+            print 'Policy Evaluation!'
         return self.params[:,self.iter].reshape((self.nDims,self.nBFs))

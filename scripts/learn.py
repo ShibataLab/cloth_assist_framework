@@ -21,26 +21,27 @@ from rl.reward import computeForceReward, computeTermReward
 # failure detection and reward parameters
 rectX = 132
 rectY = 134
-forceRate = 5.0
+forceRate = 10.0
 termScale = 100.0
 modelName = 'rewardModel.p'
-threshName = 'forceThresh.p'
 
 # power implementation parameters
 nTrajs = 5
 nIters = 20
 nSamples = 400
+explParam = 0.3
+
+# control parameters
+forceThresh = 1.0
 
 # policy parametrization parameters
 nBFs = 50
-dims = range(1,8)
-nDims = len(dims)
 jointMap = np.atleast_2d([-1.0,1.0,-1.0,1.0,-1.0,1.0,-1.0])
 
 def moving_average(a, n=3) :
     ret = np.cumsum(a, axis=0, dtype=float)
     ret[n:,:] = ret[n:,:] - ret[:-n,:]
-    return ret[n - 1:,:] / n
+    return np.pad(ret[n-1:,:]/n,((0,n-1),(0,0)),'edge')
 
 def learn(fileName, forceName):
     # load initial trajectory
@@ -49,27 +50,22 @@ def learn(fileName, forceName):
     keys = list(data.dtype.names)
     data = data.view(np.float).reshape(data.shape + (-1,))
 
-    # load initial trajectory
-    fData = np.genfromtxt('../Initialization/teachProcCEE', delimiter=',', skiprows=1)
-
-    # compute force thresholds
-    fThresh = {'left':moving_average(np.atleast_2d(np.linalg.norm(fData[:,27:30],axis=1)).T, n=10),
-               'right':moving_average(np.atleast_2d(np.linalg.norm(fData[:,33:36],axis=1)).T, n=10)}
+    fThresh = pickle.load(open(forceName,'rb'))
 
     # initialize policy by fitting dmp
     dmp, initTraj, initParams = initPolicy(data, nBFs)
     basis = dmp.gen_psi(dmp.cs.rollout())
 
     # initialize power agent
-    agent = PowerAgent(initParams, basis, nIters, nSamples, nTrajs)
+    agent = PowerAgent(initParams, basis, nIters, nSamples, nTrajs, explParam)
     cReturns = np.zeros(nIters)
 
     # play the initial trajectory
-    threshInd, fDat = playFile(initTraj, keys, threshMode=1, fThresh=fThresh)
-    time.sleep(5)
+    threshInd, fDat = playFile(initTraj, keys, 1, fThresh, forceThresh)
+    time.sleep(2)
 
     # get reward for initial trajectory
-    reward = computeForceReward(fDat, threshInd, threshName, forceRate)
+    reward = computeForceReward(fDat, threshInd, fThresh, forceRate)
     termReward, termDat = computeTermReward(rectX, rectY, termScale, modelName)
     reward[threshInd] += termReward
 
@@ -100,11 +96,11 @@ def learn(fileName, forceName):
         dmpTraj = np.hstack((np.atleast_2d(initTraj[:,0]).T, dmpTraj, dmpTraj*jointMap))
 
         # play trajectory and get reward
-        threshInd, fDat = playFile(dmpTraj, keys, threshMode=1, fThresh=fThresh)
-        time.sleep(5)
+        threshInd, fDat = playFile(dmpTraj, keys, 1, fThresh, forceThresh)
+        time.sleep(2)
 
         # compute reward obtained for trajectory
-        reward = computeForceReward(fDat, threshInd, threshName, forceRate)
+        reward = computeForceReward(fDat, threshInd, fThresh, forceRate)
         termReward, termDat = computeTermReward(rectX, rectY, termScale, modelName)
         reward[threshInd] += termReward
 

@@ -13,9 +13,6 @@ from sensor_msgs.msg import Image
 from sklearn.externals import joblib
 from cv_bridge import CvBridge, CvBridgeError
 
-imSize = 100
-cutSize = 250
-
 def computeForceReward(fData, threshInd, fThresh, forceRate):
     # compute instant reward
     nSamples = fData['left'].shape[0]
@@ -33,7 +30,8 @@ def computeImgReward(imgData, termScale, modelName='rewardModel.p'):
     imgReward = termScale*imgModel.predict(imgData)
     return imgReward
 
-def computeTermReward(offsetX, offsetY, termScale, modelName='rewardModel.p'):
+def computeTermReward(offsetX, offsetY, termScale, modelName='rewardModel.p',
+                      cutSize=250, imSize=100):
     # get img message
     msg = rospy.wait_for_message("/kinect2/sd/image_depth_rect", Image, timeout=2)
     msg2 = rospy.wait_for_message("/kinect2/qhd/image_color_rect", Image, timeout=2)
