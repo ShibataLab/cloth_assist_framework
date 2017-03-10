@@ -9,6 +9,7 @@
 import argparse
 import matplotlib
 import numpy as np
+import cPickle as pickle
 import matplotlib.pyplot as plt
 
 # matplotlib default settings
@@ -185,6 +186,12 @@ def processJA(fileName, savePath, plotFlag, startTime, stopTime, nSamples, joint
                    header=header, comments='')
 
 
+def moving_average(a, n=3) :
+    ret = np.cumsum(a, axis=0, dtype=float)
+    ret[n:,:] = ret[n:,:] - ret[:-n,:]
+    return np.pad(ret[n-1:,:]/n,((0,n-1),(0,0)),'edge')
+
+
 def processAll(fileName, savePath, plotFlag, startTime, stopTime, nSamples, jointIndex):
     """function to process all types of trajectory data."""
     # load the data files
@@ -239,7 +246,7 @@ def processAll(fileName, savePath, plotFlag, startTime, stopTime, nSamples, join
         eeData = eeData[indices,:]
         angleData = angleData[indices,:]
         torqueData = torqueData[indices,:]
-        
+
     if plotFlag:
         # plot the joint angles
         print 'Plotting the joint angles and torques'
@@ -256,6 +263,11 @@ def processAll(fileName, savePath, plotFlag, startTime, stopTime, nSamples, join
                    header=angleHeader, comments='')
         np.savetxt('%sJT' % (savePath), torqueData, delimiter=',', fmt='%.4f',
                    header=torqueHeader, comments='')
+
+        # process the force data
+        forceThresh = {'left': np.atleast_2d(np.linalg.norm(moving_average(eeData[:,27:30], n=10),axis=1)).T,
+                       'right': np.atleast_2d(np.linalg.norm(moving_average(eeData[:,33:36], n=10),axis=1)).T}
+        pickle.dump(forceThresh,open('%sThresh.p' % (savePath),'wb'))
 
 
 def main():
