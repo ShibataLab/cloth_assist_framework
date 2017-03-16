@@ -11,6 +11,7 @@ import argparse
 import numpy as np
 import cPickle as pickle
 from matplotlib import pyplot as plt
+from utility.plot_funcs import plotTraj
 
 # import reinforcement learning modules
 from rl.policy import Policy
@@ -58,6 +59,7 @@ def learn(fileName):
     cReturns = np.zeros(nIters)
 
     # play the initial trajectory
+    plotTraj({'Train':data,'Test':policy.traj})
     threshInd, fDat = playFile(policy.traj, keys, 1, fThresh, forceThresh)
     time.sleep(2)
 
@@ -93,6 +95,7 @@ def learn(fileName):
         policy.update(currentParams)
 
         # play trajectory and get reward
+        print policy.traj
         threshInd, fDat = playFile(policy.traj, keys, 1, fThresh, forceThresh)
         time.sleep(2)
 

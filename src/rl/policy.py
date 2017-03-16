@@ -24,7 +24,7 @@ class Policy(object):
 
         # setup and train the DMP
         self.dmp = DMPs_discrete(dmps=self.nDims, bfs=self.nBFs, dt=dt)
-        self.dmp.imitate_path(y_des=np.transpose(data[:,self.activeDims]))
+        self.dmp.imitate_path(y_des=np.transpose(data[:,self.activeDims+1]))
         self.params = self.dmp.w
 
         # generate a rollout from trained DMP
@@ -33,9 +33,8 @@ class Policy(object):
         armTraj[:,self.activeDims] = dmpTraj.copy()
         self.traj = np.hstack((np.atleast_2d(data[:,0]).T, armTraj, armTraj*jointMap))
         self.init = self.traj.copy()
-        print data.var(axis=0), self.traj.var(axis=0)
 
-    def update(params):
+    def update(self, params):
         self.dmp.w = params
         self.params = params
 
