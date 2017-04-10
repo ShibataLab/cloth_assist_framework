@@ -102,14 +102,14 @@ class PowerAgent(object):
                 varNom += np.sum(tempExplore**2*tempQ, axis=1)
 
             # limit the variance that is produced
-            varParams = np.minimum(np.maximum(varNom/varDNom,0.5*self.variance), 2.0*self.variance)
+            varParams = np.minimum(np.maximum(varNom/varDNom,0.5*self.variance[:,0]), 2.0*self.variance[:,0])
         else:
-            varParams = self.variance
+            varParams = self.variance[:,0]
 
         # add exploration noise to next parameter set
-        if self.iter != self.nIter-1:
+        if self.iter != self.nIters-1:
             self.params[:,self.iter] = self.params[:,self.iter] + \
-            np.sqrt(self.variance)*np.random.randn(self.nParams)
+            np.sqrt(self.variance[:,0])*np.random.randn(self.nParams)
         else:
             print 'Policy Evaluation!'
         return self.params[:,self.iter].reshape((self.nDims,self.nBFs))

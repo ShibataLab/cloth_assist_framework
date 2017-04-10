@@ -3,12 +3,13 @@
 
 # trajectory_plot.py: python function to load and plot baxter trajectory data
 # Author: Nishanth Koganti
-# Date: 2016/05/18
+# Date: 2017/02/23
 
 # import modules
 import argparse
 import matplotlib
 import numpy as np
+import cPickle as pickle
 import matplotlib.pyplot as plt
 
 # matplotlib default settings
@@ -30,7 +31,6 @@ RIGHT_EE_POS_OFFSET = 8
 
 LEFT_EE_FORCE_OFFSET = 27
 RIGHT_EE_FORCE_OFFSET = 33
-
 
 def plotJointAngles(angleData, jointIndex):
     """function to plot joint angle data."""
@@ -67,7 +67,6 @@ def plotJointAngles(angleData, jointIndex):
 
     # show all the plots
     plt.show()
-
 
 def plotJoints(angleData, torqueData, jointIndex):
     """function to plot joint angle and torque data."""
@@ -110,7 +109,6 @@ def plotJoints(angleData, torqueData, jointIndex):
     # show all the plots
     plt.show()
 
-
 def plotEE(eeData):
     """function to plot end-effector data."""
     # load all the joint data
@@ -152,7 +150,6 @@ def plotEE(eeData):
     # show all the plots
     plt.show()
 
-
 def processJA(fileName, savePath, plotFlag, startTime, stopTime, nSamples, jointIndex):
     """function to process joint angle data of trajectory."""
     # load the data files
@@ -184,6 +181,10 @@ def processJA(fileName, savePath, plotFlag, startTime, stopTime, nSamples, joint
         np.savetxt('%s' % (savePath), data, delimiter=',', fmt='%.4f',
                    header=header, comments='')
 
+def moving_average(a, n=3) :
+    ret = np.cumsum(a, axis=0, dtype=float)
+    ret[n:,:] = ret[n:,:] - ret[:-n,:]
+    return np.pad(ret[n-1:,:]/n,((0,n-1),(0,0)),'edge')
 
 def processAll(fileName, savePath, plotFlag, startTime, stopTime, nSamples, jointIndex):
     """function to process all types of trajectory data."""
@@ -239,7 +240,7 @@ def processAll(fileName, savePath, plotFlag, startTime, stopTime, nSamples, join
         eeData = eeData[indices,:]
         angleData = angleData[indices,:]
         torqueData = torqueData[indices,:]
-        
+
     if plotFlag:
         # plot the joint angles
         print 'Plotting the joint angles and torques'
@@ -257,6 +258,10 @@ def processAll(fileName, savePath, plotFlag, startTime, stopTime, nSamples, join
         np.savetxt('%sJT' % (savePath), torqueData, delimiter=',', fmt='%.4f',
                    header=torqueHeader, comments='')
 
+        # process the force data
+        forceThresh = {'left': np.atleast_2d(np.linalg.norm(moving_average(eeData[:,27:30], n=10),axis=1)).T,
+                       'right': np.atleast_2d(np.linalg.norm(moving_average(eeData[:,33:36], n=10),axis=1)).T}
+        pickle.dump(forceThresh,open('%sThresh.p' % (savePath),'wb'))
 
 def main():
     """main function of program with user interface and data preprocessing."""

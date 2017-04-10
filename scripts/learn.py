@@ -29,10 +29,10 @@ modelName = 'rewardModel.p'
 nTrajs = 5
 nIters = 20
 nSamples = 400
-explParam = 0.3
+explParam = 0.2
 
 # control parameters
-forceThresh = 1.0
+forceThresh = 2.0
 
 # policy parametrization parameters
 nBFs = 50
