@@ -295,8 +295,7 @@ void Extractor::createCloud(cv::Mat &roi)
 
   m_cloud->is_dense = true;
   m_cloud->points.resize(m_cloud->height * m_cloud->width);
-  std::cout << m_cloud->size() << std::endl;
-
+  
   // create lookup tables
   readCameraInfo();
   createLookup();

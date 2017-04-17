@@ -19,8 +19,8 @@ from rl.control import playFile, rewindFile
 from rl.reward import computeForceReward, computeTermReward
 
 # failure detection and reward parameters
-rectX = 132
-rectY = 134
+rectX = 121
+rectY = 107
 forceRate = 10.0
 termScale = 100.0
 modelName = 'rewardModel.p'
@@ -29,10 +29,10 @@ modelName = 'rewardModel.p'
 nTrajs = 5
 nIters = 20
 nSamples = 400
-explParam = 0.2
+explParam = 0.5
 
 # control parameters
-forceThresh = 2.0
+forceThresh = 1.0
 
 # policy parametrization parameters
 nBFs = 50
