@@ -14,7 +14,7 @@ from matplotlib import pyplot as plt
 
 class PowerAgent(object):
     def __init__(self, initParams, basis, nIters=20, nSamples = 400,
-                 nTrajs=5, explParam=0.2):
+                 nTrajs=5, explParam=0.2, varMode=0):
         # initialize parameters
         self.nIters = nIters
         self.nTrajs = nTrajs
@@ -34,6 +34,7 @@ class PowerAgent(object):
         self.params = np.zeros((self.nParams, self.nIters))
 
         # set the exploration variance for parameters
+        self.varMode = varMode
         self.std = explParam*initParams.mean()*np.ones(self.nParams)
         self.variance = (explParam*initParams.mean())**2*np.ones((self.nParams, 1))
 
@@ -84,7 +85,7 @@ class PowerAgent(object):
         self.currentParam = self.params[:,self.iter]
 
         # update variance parameters
-        if self.iter > 1:
+        if self.iter > 1 and self.varMode:
             varNom = np.zeros(self.nParams)
             varDNom = 1e-10*np.ones(self.nParams)
 

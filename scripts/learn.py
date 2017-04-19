@@ -28,6 +28,7 @@ modelName = 'rewardModel.p'
 # power implementation parameters
 nTrajs = 5
 nIters = 20
+varMode = 0
 nSamples = 400
 explParam = 0.5
 
@@ -37,11 +38,6 @@ forceThresh = 1.0
 # policy parametrization parameters
 nBFs = 50
 jointMap = np.atleast_2d([-1.0,1.0,-1.0,1.0,-1.0,1.0,-1.0])
-
-def moving_average(a, n=3) :
-    ret = np.cumsum(a, axis=0, dtype=float)
-    ret[n:,:] = ret[n:,:] - ret[:-n,:]
-    return np.pad(ret[n-1:,:]/n,((0,n-1),(0,0)),'edge')
 
 def learn(fileName, forceName):
     # load initial trajectory
@@ -57,7 +53,7 @@ def learn(fileName, forceName):
     basis = dmp.gen_psi(dmp.cs.rollout())
 
     # initialize power agent
-    agent = PowerAgent(initParams, basis, nIters, nSamples, nTrajs, explParam)
+    agent = PowerAgent(initParams, basis, nIters, nSamples, nTrajs, explParam, varMode)
     cReturns = np.zeros(nIters)
 
     # play the initial trajectory
@@ -73,6 +69,8 @@ def learn(fileName, forceName):
     if threshInd > 0:
         rewindFile(initTraj, keys, threshInd)
         time.sleep(5)
+    else:
+        return 0
 
     # update agent based on rewards observed
     cReturns[0] = agent.update(reward)
@@ -128,6 +126,8 @@ def learn(fileName, forceName):
     plt.ylabel('return')
     plt.xlabel('rollouts')
     plt.show()
+
+    return 0
 
 def main():
     # initialize argument parser
