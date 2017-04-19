@@ -259,8 +259,8 @@ def processAll(fileName, savePath, plotFlag, startTime, stopTime, nSamples, join
                    header=torqueHeader, comments='')
 
         # process the force data
-        forceThresh = {'left': np.atleast_2d(np.linalg.norm(moving_average(eeData[:,27:30], n=10),axis=1)).T,
-                       'right': np.atleast_2d(np.linalg.norm(moving_average(eeData[:,33:36], n=10),axis=1)).T}
+        forceThresh = {'left': np.atleast_2d(np.linalg.norm(moving_average(eeData[:,27:30], n=20),axis=1)).T,
+                       'right': np.atleast_2d(np.linalg.norm(moving_average(eeData[:,33:36], n=20),axis=1)).T}
         pickle.dump(forceThresh,open('%sThresh.p' % (savePath),'wb'))
 
 def main():

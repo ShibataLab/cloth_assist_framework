@@ -30,10 +30,11 @@ nTrajs = 5
 nIters = 20
 varMode = 0
 nSamples = 400
-explParam = 0.5
+explParam = 1.0
 
 # control parameters
-forceThresh = 1.0
+fixThresh = 0
+forceThresh = 3.0
 
 # policy parametrization parameters
 nBFs = 50
@@ -46,7 +47,11 @@ def learn(fileName, forceName):
     keys = list(data.dtype.names)
     data = data.view(np.float).reshape(data.shape + (-1,))
 
-    fThresh = pickle.load(open(forceName,'rb'))
+    if fixThresh:
+        fThresh = {'left':forceThresh*np.ones((nSamples,1)),
+                   'right':forceThresh*np.ones((nSamples,1))}
+    else:
+        fThresh = pickle.load(open(forceName,'rb'))
 
     # initialize policy by fitting dmp
     dmp, initTraj, initParams = initPolicy(data, nBFs)
@@ -57,7 +62,7 @@ def learn(fileName, forceName):
     cReturns = np.zeros(nIters)
 
     # play the initial trajectory
-    threshInd, fDat = playFile(initTraj, keys, 1, fThresh, forceThresh)
+    threshInd, fDat = playFile(data, keys, 1, fThresh, forceThresh)
     time.sleep(2)
 
     # get reward for initial trajectory
@@ -66,7 +71,7 @@ def learn(fileName, forceName):
     reward[threshInd] += termReward
 
     # rewind trajectory
-    if threshInd > 0:
+    if threshInd < nSamples-1:
         rewindFile(initTraj, keys, threshInd)
         time.sleep(5)
     else:
@@ -114,7 +119,7 @@ def learn(fileName, forceName):
         pickle.dump(results,open('Iter%d.p' % (i+1),'wb'))
 
         # rewind trajectory if fail
-        if threshInd > 0:
+        if threshInd < nSamples-1:
             rewindFile(initTraj, keys, threshInd)
             time.sleep(5)
         else:
