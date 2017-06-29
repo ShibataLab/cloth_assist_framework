@@ -34,7 +34,7 @@ def plotScales(scales, options, yThresh=0.05):
 
     return ax
 
-def plotLatent(inX, title, model=None, which_indices=[0,1], plot_inducing=False, plot_variance=False, max_points=[800,300]):
+def plotLatent(inX, title, model=None, plotIndices=None, plot_inducing=False, plot_variance=False, max_points=[800,300]):
     s = 100
     marker = 'o'
     resolution = 50
@@ -42,7 +42,11 @@ def plotLatent(inX, title, model=None, which_indices=[0,1], plot_inducing=False,
     fig = plt.figure()
     ax = fig.add_subplot(111)
 
-    input1, input2 = which_indices
+    if plotIndices == None:
+        scales = model.kern.input_sensitivity(summarize=False)
+        plotIndices = np.argsort(scales)[-2:]
+        print plotIndices
+    input1, input2 = plotIndices
 
     if inX[0].shape[0] > max_points[0]:
         print("Warning".format(inX[0].shape))
@@ -101,15 +105,18 @@ def plotLatent(inX, title, model=None, which_indices=[0,1], plot_inducing=False,
 def main():
     # add argument parser
     parser = argparse.ArgumentParser()
-    parser.add_argument('--input', '-i', type=str, required=True,
+    parser.add_argument('--fileName', '-f', type=str, required=True,
                         help='Enter filename to be loaded')
-    parser.add_argument('--output', '-o', type=str, required=True,
+    parser.add_argument('--saveName', '-s', type=str, required=True,
                         help='Enter filename to save trained model')
+    parser.add_argument('--init', '-i', type=str, default='pca',
+                        help='Enter initialization method for BGPLVM')
     args = parser.parse_args()
 
     # parsing the arguments
-    inputVar = args.input
-    outputVar = args.output
+    init = args.init
+    inputVar = args.fileName
+    outputVar = args.saveName
 
     # load joint angle data with header
     data = np.genfromtxt('%s' % (inputVar), delimiter=',', names=True)
@@ -129,13 +136,18 @@ def main():
     # set the number of inducing inputs
     nInducing = 50
 
-    pca = PCA(n_components=qDim)
-    pca.fit(trainData)
-
     # get latent points and scales
-    xData = pca.transform(trainData)
-    scales = pca.explained_variance_ratio_
-    scales = scales/scales.max()
+
+    if init == 'pca':
+        pca = PCA(n_components=qDim)
+        pca.fit(trainData)
+
+        xData = pca.transform(trainData)
+        scales = pca.explained_variance_ratio_
+        scales = scales/scales.max()
+    elif init == 'rand':
+        xData = np.random.normal(0, 1, (data.shape[0],qDim))
+        scales = np.ones(qDim)
 
     # setting up the kernel
     kernel = GPy.kern.RBF(qDim, variance=1., lengthscale=1./scales,
@@ -147,13 +159,13 @@ def main():
                                            kernel = kernel, X = xData)
 
     # train the model
-    SNR = 100
+    SNR = 10
     var = bgplvmModel.Y.var()
 
     bgplvmModel.rbf.variance.fix(var)
     bgplvmModel.Gaussian_noise.variance.fix(var/SNR)
 
-    initVardistIters = 500
+    initVardistIters = 50
     bgplvmModel.optimize(messages = True, max_iters = initVardistIters)
 
     # training without constraints
@@ -162,14 +174,15 @@ def main():
     bgplvmModel.optimize(messages = True, max_iters = trainIters)
 
     # plot results
-    bgplvmX = [xData,np.zeros((1,qDim))]
+    bgplvmX = [bgplvmModel.X.mean, np.zeros((1,qDim))]
 
     scalesBGPLVM = bgplvmModel.kern.input_sensitivity(summarize=False)
     scalesBGPLVM =  scalesBGPLVM/scalesBGPLVM.max()
 
     options = {'title':'Bayesian GPLVM','ylabel':'ARD Weight'}
     plotScales(scalesBGPLVM,options)
-    plotLatent(bgplvmX, 'Bayesian GPLVM', model=bgplvmModel, plot_variance=False, max_points=[1800,400])
+    plotLatent(bgplvmX, 'Bayesian GPLVM', model=bgplvmModel,
+               plot_variance=False, max_points=[1800,400])
     plt.show()
 
     # save the model to file

@@ -33,10 +33,6 @@ class ModelAnimator(object):
     def __init__(self):
         # find out the absolute path of model file
         fname = rospy.get_param('~file')
-        plotIndices = np.asarray(rospy.get_param('~plotIndices'))
-        print plotIndices
-        fname = fname
-        rospy.loginfo('Model file absolute path = ' + fname)
 
         # create publisher and message instances
         self.leftCommand = JointCommand()
@@ -64,7 +60,8 @@ class ModelAnimator(object):
         # visualize the bgplvm latent space
         self.maxPoints = 1000
         self.plotVariance = True
-        self.plotIndices = plotIndices
+        scales = self.model.kern.input_sensitivity(summarize=False)
+        self.plotIndices = np.argsort(scales)[-2:]
         self.title = 'Latent Space Visualization'
 
         # variables for real-time plotting
@@ -170,7 +167,9 @@ class ModelAnimator(object):
             self.yMove = y
 
             # reconstruct joint angle data
-            latent_value = [self.xMove, self.yMove] + (self.qDim-2)*[0.0]
+            latent_value = (self.qDim)*[0.0]
+            latent_value[self.plotIndices[0]] = self.xMove
+            latent_value[self.plotIndices[1]] = self.yMove
             joint_angles = self.model.predict(np.atleast_2d(latent_value))
             joint_angles = [0]*5 + joint_angles[0][0,:].tolist()
 
