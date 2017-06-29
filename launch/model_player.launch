@@ -1,0 +1,23 @@
+<launch>
+    <!-- define args -->
+    <arg name="file"  default="$(find cloth_assist_framework)/files/bgplvm/trajectory.p" />
+    <arg name="plotIndices"  default="[0,1]" />
+
+    <!-- urdf xml robot description loaded on the Parameter Server-->
+    <param name="robot_description" command="$(find xacro)/xacro.py --inorder $(find baxter_description)/urdf/baxter.urdf.xacro"/>
+
+    <!-- robot state publisher -->
+    <node name="robot_state_publisher" pkg="robot_state_publisher" type="state_publisher"/>
+
+    <!-- robot visualization -->
+    <node pkg="rviz" type="rviz" respawn="false" name="rviz" args="-d $(find cloth_assist_framework)/files/bgplvm/config.rviz" />
+
+    <!-- kinect image source -->
+    <node pkg="image_view" type="image_view" respawn="false" name="image_view" args="image:=/kinect2/qhd/image_color" />
+
+    <!-- animation from player.py-->
+    <node pkg="cloth_assist_framework" type="model_player.py" name="baxter_animation" output="screen">
+        <param name="file" value="$(arg file)" />
+        <rosparam param="plotIndices">[0, 1]</rosparam>
+    </node>
+</launch>

@@ -1,0 +1,13 @@
+<launch>
+    <!-- robot state publisher -->
+    <!-- urdf xml robot description loaded on the Parameter Server-->
+    <param name="robot_description" command="$(find xacro)/xacro.py --inorder $(find baxter_description)/urdf/baxter.urdf.xacro" />
+    <node name="robot_state_publisher" pkg="robot_state_publisher" type="state_publisher" />
+
+    <!-- robot visualization -->
+    <node pkg="rviz" type="rviz" respawn="false" name="rviz" args="-d $(find cloth_assist_framework)/files/bgplvm/config.rviz" />
+
+    <!-- animation from player.py-->
+    <arg name="file"  default="$(find cloth_assist_framework)/files/bgplvm/trajectory.p" />
+    <node pkg="cloth_assist_framework" type="model_animator.py" name="baxter_animation" args="-f $(arg file)" />
+</launch>

@@ -20,8 +20,8 @@ from rl.control import playFile, rewindFile
 from rl.reward import computeForceReward, computeTermReward
 
 # failure detection and reward parameters
-rectX = 132
-rectY = 134
+rectX = 121
+rectY = 107
 forceRate = 10.0
 termScale = 10.0
 forceName = 'forceThresh.p'
@@ -31,36 +31,41 @@ modelName = 'rewardModel.p'
 qMode = 1
 nTrajs = 5
 nIters = 20
+varMode = 0
 nSamples = 400
-explParam = 0.2
+explParam = 1.0
 
 # control parameters
-forceThresh = 2.0
+fixThresh = 0
+forceThresh = 3.0
 
 # policy parametrization parameters
 nBFs = 50
 nDims = 2
 
-def learn(fileName):
+def learn(fileName, forceName):
     # load initial trajectory
     data = np.genfromtxt(fileName, delimiter=',', names=True)
 
     keys = list(data.dtype.names)
     data = data.view(np.float).reshape(data.shape + (-1,))
 
-    fThresh = pickle.load(open(forceName,'rb'))
+    if fixThresh:
+        fThresh = {'left':forceThresh*np.ones((nSamples,1)),
+                   'right':forceThresh*np.ones((nSamples,1))}
+    else:
+        fThresh = pickle.load(open(forceName,'rb'))
 
     # initialize policy by fitting dmp
     policy = Policy(data, nDims, nBFs)
     basis = policy.dmp.gen_psi(policy.dmp.cs.rollout())
 
     # initialize power agent
-    agent = PowerAgent(policy.params, nIters, nSamples, nTrajs, explParam, qMode, basis)
+    agent = PowerAgent(initParams, basis, nIters, nSamples, nTrajs, explParam, varMode)
     cReturns = np.zeros(nIters)
 
     # play the initial trajectory
-    plotTraj({'Train':data,'Test':policy.traj})
-    threshInd, fDat = playFile(policy.traj, keys, 1, fThresh, forceThresh)
+    threshInd, fDat = playFile(data, keys, 1, fThresh, forceThresh)
     time.sleep(2)
 
     # get reward for initial trajectory
@@ -69,9 +74,11 @@ def learn(fileName):
     reward[threshInd] += termReward
 
     # rewind trajectory
-    if threshInd > 0:
-        rewindFile(policy.init, keys, threshInd)
+    if threshInd < nSamples-1:
+        rewindFile(initTraj, keys, threshInd)
         time.sleep(5)
+    else:
+        return 0
 
     # update agent based on rewards observed
     cReturns[0] = agent.update(reward)
@@ -119,8 +126,8 @@ def learn(fileName):
         pickle.dump(results,open('Iter%d.p' % (i+1),'wb'))
 
         # rewind trajectory if fail
-        if threshInd > 0:
-            rewindFile(policy.init, keys, threshInd)
+        if threshInd < nSamples-1:
+            rewindFile(initTraj, keys, threshInd)
             time.sleep(5)
         else:
             break
@@ -131,6 +138,8 @@ def learn(fileName):
     plt.ylabel('return')
     plt.xlabel('rollouts')
     plt.show()
+
+    return 0
 
 def main():
     # initialize argument parser

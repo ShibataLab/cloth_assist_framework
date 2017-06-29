@@ -13,8 +13,8 @@ import cPickle as pickle
 from matplotlib import pyplot as plt
 
 class PowerAgent(object):
-    def __init__(self, initParams, nIters=20, nSamples=400,
-                 nTrajs=5, explParam=0.2, qMode=0, basis=None):
+    def __init__(self, initParams, basis, nIters=20, nSamples = 400,
+                 nTrajs=5, explParam=0.2, varMode=0):
         # initialize parameters
         self.qMode = qMode
         self.nIters = nIters
@@ -38,6 +38,7 @@ class PowerAgent(object):
         self.params = np.zeros((self.nParams, self.nIters))
 
         # set the exploration variance for parameters
+        self.varMode = varMode
         self.std = explParam*initParams.mean()*np.ones(self.nParams)
         self.variance = (explParam*initParams.mean())**2*np.ones((self.nParams, 1))
 
@@ -108,7 +109,7 @@ class PowerAgent(object):
         self.currentParam = self.params[:,self.iter]
 
         # update variance parameters
-        if self.iter > 1:
+        if self.iter > 1 and self.varMode:
             varNom = np.zeros(self.nParams)
             if self.qMode:
                 varDNom = 1e-10*np.ones(self.nParams)
@@ -137,14 +138,14 @@ class PowerAgent(object):
                     varNom += tempExplore**2*self.Returns[np.int(ind)]
 
             # limit the variance that is produced
-            varParams = np.minimum(np.maximum(varNom/varDNom,0.1*self.variance[:,0]), 10.0*self.variance[:,0])
+            varParams = np.minimum(np.maximum(varNom/varDNom,0.5*self.variance[:,0]), 2.0*self.variance[:,0])
         else:
             varParams = self.variance[:,0]
 
         # add exploration noise to next parameter set
         if self.iter != self.nIters-1:
             self.params[:,self.iter] = self.params[:,self.iter] + \
-            np.sqrt(varParams)*np.random.randn(self.nParams)
+            np.sqrt(self.variance[:,0])*np.random.randn(self.nParams)
         else:
             print 'Policy Evaluation!'
         return self.params[:,self.iter].reshape((self.nDims,self.nBFs))
