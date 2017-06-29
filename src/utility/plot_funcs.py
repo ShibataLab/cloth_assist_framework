@@ -15,7 +15,7 @@ from matplotlib import pyplot as plt
 ################################################################################
 
 def plotTraj(Dataset, plotType = 0, jointIndex = np.arange(7),
-             labels = ['Train','Test'], colors=['b','r']):
+             colors={'Train':'b','Test':'r'}):
     """function to plot multiple joint tracks."""
     timeData = {}
     leftData = {}

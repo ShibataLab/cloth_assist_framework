@@ -186,6 +186,12 @@ def moving_average(a, n=3) :
     ret[n:,:] = ret[n:,:] - ret[:-n,:]
     return np.pad(ret[n-1:,:]/n,((0,n-1),(0,0)),'edge')
 
+def moving_average(a, n=3) :
+    ret = np.cumsum(a, axis=0, dtype=float)
+    ret[n:,:] = ret[n:,:] - ret[:-n,:]
+    return np.pad(ret[n-1:,:]/n,((0,n-1),(0,0)),'edge')
+
+
 def processAll(fileName, savePath, plotFlag, startTime, stopTime, nSamples, jointIndex):
     """function to process all types of trajectory data."""
     # load the data files

@@ -9,36 +9,36 @@
 import numpy as np
 from dmp.dmp_discrete import DMPs_discrete
 
-def dmpFit(data, nBFS=50):
-    # set parameters to train dmp
-    dt = 1.0/data.shape[0]
-    nDims = data.shape[1]-1
+armDims = range(1,8)
+jointMap = np.atleast_2d([-1.0,1.0,-1.0,1.0,-1.0,1.0,-1.0])
 
-    # setup and train the DMP
-    dmp = DMPs_discrete(dmps=nDims, bfs=nBFS, dt=dt)
-    dmp.imitate_path(y_des=np.transpose(data[:,1:]))
+class Policy(object):
+    def __init__(self, data, nDims=2, nBFs=50):
+        # set parameters to train dmp
+        dt = 1.0/data.shape[0]
 
-    # generate a rollout from trained DMP
-    dmpParam = dmp.w
-    dmpTraj,_,_ = dmp.rollout()
-    dmpTraj = np.concatenate((np.transpose(np.atleast_2d(data[:,0])), dmpTraj), axis=1)
+        # obtain active dimensions
+        self.nBFs = nBFs
+        self.nDims = nDims
+        self.activeDims = np.sort(np.argsort(np.var(data[:,armDims],axis=0))[-self.nDims:])
 
-    return dmp, dmpTraj, dmpParam
+        # setup and train the DMP
+        self.dmp = DMPs_discrete(dmps=self.nDims, bfs=self.nBFs, dt=dt)
+        self.dmp.imitate_path(y_des=np.transpose(data[:,self.activeDims+1]))
+        self.params = self.dmp.w
 
-def initPolicy(data, nBFS=50):
-    # set parameters to train dmp
-    dims=range(1,8)
-    nDims = len(dims)
-    dt = 1.0/data.shape[0]
-    jointMap = np.atleast_2d([-1.0,1.0,-1.0,1.0,-1.0,1.0,-1.0])
+        # generate a rollout from trained DMP
+        dmpTraj,_,_ = self.dmp.rollout()
+        armTraj = data[:,armDims].copy()
+        armTraj[:,self.activeDims] = dmpTraj.copy()
+        self.traj = np.hstack((np.atleast_2d(data[:,0]).T, armTraj, armTraj*jointMap))
+        self.init = self.traj.copy()
 
-    # setup and train the DMP
-    dmp = DMPs_discrete(dmps=nDims, bfs=nBFS, dt=dt)
-    dmp.imitate_path(y_des=np.transpose(data[:,dims]))
+    def update(self, params):
+        self.dmp.w = params
+        self.params = params
 
-    # generate a rollout from trained DMP
-    dmpParam = dmp.w
-    dmpTraj,_,_ = dmp.rollout()
-    dmpTraj = np.hstack((np.atleast_2d(data[:,0]).T, dmpTraj, dmpTraj*jointMap))
-
-    return dmp, dmpTraj, dmpParam
+        dmpTraj,_,_ = self.dmp.rollout()
+        armTraj = self.traj[:,armDims].copy()
+        armTraj[:,self.activeDims] = dmpTraj.copy()
+        self.traj = np.hstack((np.atleast_2d(data[:,0]).T, armTraj, armTraj*jointMap))

@@ -11,10 +11,11 @@ import argparse
 import numpy as np
 import cPickle as pickle
 from matplotlib import pyplot as plt
+from utility.plot_funcs import plotTraj
 
 # import reinforcement learning modules
+from rl.policy import Policy
 from rl.power import PowerAgent
-from rl.policy import initPolicy
 from rl.control import playFile, rewindFile
 from rl.reward import computeForceReward, computeTermReward
 
@@ -22,10 +23,12 @@ from rl.reward import computeForceReward, computeTermReward
 rectX = 121
 rectY = 107
 forceRate = 10.0
-termScale = 100.0
+termScale = 10.0
+forceName = 'forceThresh.p'
 modelName = 'rewardModel.p'
 
 # power implementation parameters
+qMode = 1
 nTrajs = 5
 nIters = 20
 varMode = 0
@@ -38,7 +41,7 @@ forceThresh = 3.0
 
 # policy parametrization parameters
 nBFs = 50
-jointMap = np.atleast_2d([-1.0,1.0,-1.0,1.0,-1.0,1.0,-1.0])
+nDims = 2
 
 def learn(fileName, forceName):
     # load initial trajectory
@@ -54,8 +57,8 @@ def learn(fileName, forceName):
         fThresh = pickle.load(open(forceName,'rb'))
 
     # initialize policy by fitting dmp
-    dmp, initTraj, initParams = initPolicy(data, nBFs)
-    basis = dmp.gen_psi(dmp.cs.rollout())
+    policy = Policy(data, nDims, nBFs)
+    basis = policy.dmp.gen_psi(policy.dmp.cs.rollout())
 
     # initialize power agent
     agent = PowerAgent(initParams, basis, nIters, nSamples, nTrajs, explParam, varMode)
@@ -84,22 +87,23 @@ def learn(fileName, forceName):
     results = {}
     results['force'] = fDat
     results['term'] = termDat
-    results['traj'] = initTraj
     results['reward'] = reward
-    results['qval'] = agent.Q[:,0]
+    results['traj'] = policy.traj
+    if qMode:
+        results['qval'] = agent.Q[:,0]
+    else:
+        results['return'] = agent.Returns[0]
     pickle.dump(results,open('Iter0.p','wb'))
 
     # loop over the iterations
     for i in range(nIters-1):
         # sample from the agent
-        dmp.w = agent.sample()
-
-        # generate rollout from parameters
-        dmpTraj,_,_ = dmp.rollout()
-        dmpTraj = np.hstack((np.atleast_2d(initTraj[:,0]).T, dmpTraj, dmpTraj*jointMap))
+        currentParams = agent.sample()
+        policy.update(currentParams)
 
         # play trajectory and get reward
-        threshInd, fDat = playFile(dmpTraj, keys, 1, fThresh, forceThresh)
+        print policy.traj
+        threshInd, fDat = playFile(policy.traj, keys, 1, fThresh, forceThresh)
         time.sleep(2)
 
         # compute reward obtained for trajectory
@@ -113,9 +117,12 @@ def learn(fileName, forceName):
         results = {}
         results['force'] = fDat
         results['term'] = termDat
-        results['traj'] = dmpTraj
         results['reward'] = reward
-        results['qval'] = agent.Q[:,i+1]
+        results['traj'] = policy.traj
+        if qMode:
+            results['qval'] = agent.Q[:,i]
+        else:
+            results['return'] = agent.Returns[i]
         pickle.dump(results,open('Iter%d.p' % (i+1),'wb'))
 
         # rewind trajectory if fail
@@ -141,14 +148,13 @@ def main():
 
     # add arguments to parser
     parser.add_argument('-t', '--trajname', type = str, help = 'Trajectory Filename')
-    parser.add_argument('-f', '--forcename', type = str, help = 'Force Data Filename')
 
     # parsing arguments
     args = parser.parse_args(rospy.myargv()[1:])
 
     # initialize node with a unique name
     rospy.init_node("Learn")
-    learn(args.trajname, args.forcename)
+    learn(args.trajname)
 
 if __name__ == "__main__":
     main()
