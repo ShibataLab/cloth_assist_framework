@@ -252,7 +252,7 @@ void Extractor::windowCalibrate()
   }
   else
   {
-    m_window = cv::Rect(134, 134, WINDOWSIZE, WINDOWSIZE);
+    m_window = cv::Rect(116, 93, WINDOWSIZE, WINDOWSIZE);
   }
 }
 
@@ -295,7 +295,7 @@ void Extractor::createCloud(cv::Mat &roi)
 
   m_cloud->is_dense = true;
   m_cloud->points.resize(m_cloud->height * m_cloud->width);
-  
+
   // create lookup tables
   readCameraInfo();
   createLookup();

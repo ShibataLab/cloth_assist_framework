@@ -41,7 +41,7 @@ class ModelAnimator(object):
         self.startMotion = False
 
         # visualize the bgplvm latent space
-        self.maxPoints = 1000
+        self.maxPoints = 100
         self.plotVariance = True
         scales = self.model.kern.input_sensitivity(summarize=False)
         self.plotIndices = np.argsort(scales)[-2:]
@@ -83,9 +83,7 @@ class ModelAnimator(object):
 
         # subsample latent points for easier visualization
         if latentData.shape[0] > self.maxPoints:
-            subsample = np.random.choice(latentData.shape[0], size=self.maxPoints,
-                                         replace=False)
-            latentData = latentData[subsample]
+            latentData = latentData[:self.maxPoints,:]
 
         # compute plot limits
         xmin, ymin = latentData[:, [input1, input2]].min(0)
