@@ -28,7 +28,7 @@ int main(int argc, char **argv)
   // ns = kinect2
   // selecting default topic names when the options are not provided
   int recordMode = 0;
-  std::string topicType = "qhd";
+  std::string topicType = "sd";
   std::string ns = K2_DEFAULT_NS;
   std::string fileName = "kinect";
   std::string topicColor = K2_TOPIC_QHD K2_TOPIC_IMAGE_COLOR K2_TOPIC_IMAGE_RECT;

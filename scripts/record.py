@@ -25,7 +25,7 @@ def main():
 
     # add arguments to parser
     parser.add_argument('-f', '--fileName', type = str, help = 'Output Joint Angle Filename')
-    parser.add_argument('-m', '--mode', type = int, help = 'JointRecorder mode: 0=Only JA, 1=All data')
+    parser.add_argument('-m', '--mode', type = int, default=1, help = 'JointRecorder mode: 0=Only JA, 1=All data')
 
     # parse the arguments
     args = parser.parse_args(rospy.myargv()[1:])

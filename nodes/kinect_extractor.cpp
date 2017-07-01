@@ -30,7 +30,7 @@ int main(int argc, char **argv)
   bool videoMode = false;
   bool cloudMode = false;
   bool calibrateMode = false;
-  std::string topicType = "qhd";
+  std::string topicType = "sd";
   std::string ns = K2_DEFAULT_NS;
   std::string fileName = "default";
   std::string topicColor, topicDepth, topicCameraInfo;
