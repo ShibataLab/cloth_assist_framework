@@ -25,7 +25,8 @@ def main():
 
     # add arguments to parser
     parser.add_argument('-f', '--fileName', type = str, help = 'Output Joint Angle Filename')
-    parser.add_argument('-t', '--thresh', type = float, help = 'Force Threshold for fail detect', )
+    parser.add_argument('-t', '--thresh', type = float, default = 0,
+                        help = 'Force Threshold for fail detect', )
 
     # parsing arguments
     args = parser.parse_args(rospy.myargv()[1:])
@@ -63,7 +64,7 @@ def main():
         data = np.genfromtxt(args.fileName, delimiter=',', names=True)
         keys = list(data.dtype.names)
         data = data.view(np.float).reshape(data.shape + (-1,))
-        playFile(data, keys, threshMode=0)
+        playFile(data, keys, threshMode=args.thresh, fThresh=10)
 
     # if no arguments are given then it will run in sync mode
     else:
@@ -103,7 +104,7 @@ def main():
                     data = np.genfromtxt(playbackFilename, delimiter=',', names=True)
                     keys = data.dtype.names
                     data = data.view(np.float).reshape(data.shape + (-1,))
-                    playFile(data, keys, threshMode=0)
+                    playFile(data, keys, threshMode=args.thresh, fThresh=15)
 
                 # send the stop playing message
                 socket.send("StoppedPlaying")
