@@ -57,6 +57,7 @@ def playFile(data, keys, threshMode=0, fThresh=None,
     nSamples = data.shape[0]
 
     # play trajectory
+    fail = 0
     threshInd = nSamples-1
     for i in range(nSamples):
         sys.stdout.write("\r Record %d of %d " % (i, nSamples-1))
@@ -79,11 +80,19 @@ def playFile(data, keys, threshMode=0, fThresh=None,
         forceRight = np.asarray(rightBuffer).mean()
         fData['left'][i] = forceLeft
         fData['right'][i] = forceRight
-
+        print forceLeft, forceRight
+        
         # check for force thresholds
-        if threshMode and forceLeft > fPass and forceRight > fPass:
-            if forceLeft > fThresh['left'][i,0]+forceThresh or \
-               forceRight > fThresh['right'][i,0]+forceThresh:
+        if threshMode and (forceLeft > fPass or forceRight > fPass):
+            if isinstance(fThresh, dict):
+                if forceLeft > fThresh['left'][i,0]+forceThresh or \
+                    forceRight > fThresh['right'][i,0]+forceThresh:
+                    fail = 1
+            else:
+                if forceLeft > fThresh or forceRight > fThresh:
+                    fail = 1
+
+            if fail:
                 print "Error!! Force threshold exceed Left:%f,%f, Right:%f,%f" %\
                 (forceLeft, fThresh['left'][i,0], forceRight, fThresh['right'][i,0])
                 threshInd = i
