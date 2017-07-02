@@ -186,12 +186,6 @@ def moving_average(a, n=3) :
     ret[n:,:] = ret[n:,:] - ret[:-n,:]
     return np.pad(ret[n-1:,:]/n,((0,n-1),(0,0)),'edge')
 
-def moving_average(a, n=3) :
-    ret = np.cumsum(a, axis=0, dtype=float)
-    ret[n:,:] = ret[n:,:] - ret[:-n,:]
-    return np.pad(ret[n-1:,:]/n,((0,n-1),(0,0)),'edge')
-
-
 def processAll(fileName, savePath, plotFlag, startTime, stopTime, nSamples, jointIndex):
     """function to process all types of trajectory data."""
     # load the data files
@@ -242,6 +236,11 @@ def processAll(fileName, savePath, plotFlag, startTime, stopTime, nSamples, join
         torqueData[:, 0] = torqueData[:, 0] - torqueData[0, 0]
 
     if nSamples != 0:
+        # filter the torque and force data
+        eeInd = [27:30]+[33:36]
+        eeData[:,eeInd] = moving_average(eeData[:,eeInd], n=20)
+        torqueData[:,15:] = moving_average(torqueData[:,15:], n=10)
+
         indices = np.linspace(0, eeData.shape[0]-1, num=nSamples, dtype=np.int, endpoint=True)
         eeData = eeData[indices,:]
         angleData = angleData[indices,:]
