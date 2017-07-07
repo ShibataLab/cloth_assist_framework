@@ -52,13 +52,16 @@ catkin_package(
 include_directories(include ${PCL_INCLUDE_DIRS} ${catkin_INCLUDE_DIRS} ${OpenCV_INCLUDE_DIRS})
 
 add_executable(pose_extractor nodes/pose_extractor.cpp)
-target_link_libraries(pose_extractor ${PCL_LIBRARIES} ${catkin_LIBRARIES} ${OpenCV_LIBRARIES} ${kinect2_bridge_LIBRARIES})
+target_link_libraries(pose_extractor ${PCL_LIBRARIES} ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
 
 add_executable(kinect_extractor nodes/kinect_extractor.cpp src/extractor.cpp)
-target_link_libraries(kinect_extractor ${PCL_LIBRARIES} ${catkin_LIBRARIES} ${OpenCV_LIBRARIES} ${kinect2_bridge_LIBRARIES})
+target_link_libraries(kinect_extractor ${PCL_LIBRARIES} ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
 
 add_executable(kinect_recorder nodes/kinect_recorder.cpp src/recorder.cpp)
 target_link_libraries(kinect_recorder ${PCL_LIBRARIES} ${catkin_LIBRARIES} ${OpenCV_LIBRARIES} ${kinect2_bridge_LIBRARIES} -lzmq)
+
+add_executable(kinect_processor nodes/kinect_processor.cpp src/processor.cpp)
+target_link_libraries(kinect_processor ${PCL_LIBRARIES} ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
 
 add_executable(sync nodes/sync.cpp)
 target_link_libraries(sync -lzmq)
