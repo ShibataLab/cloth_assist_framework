@@ -80,21 +80,24 @@ def playFile(data, keys, threshMode=0, fThresh=None,
         forceRight = np.asarray(rightBuffer).mean()
         fData['left'][i] = forceLeft
         fData['right'][i] = forceRight
-        print forceLeft, forceRight
-        
+
+        print armLeft.commanded_efforts()
+
         # check for force thresholds
         if threshMode and (forceLeft > fPass or forceRight > fPass):
             if isinstance(fThresh, dict):
                 if forceLeft > fThresh['left'][i,0]+forceThresh or \
                     forceRight > fThresh['right'][i,0]+forceThresh:
+                    print "Error!! Force threshold exceed Left:%f,%f, Right:%f,%f" %\
+                    (forceLeft, fThresh['left'][i,0], forceRight, fThresh['right'][i,0])
                     fail = 1
             else:
                 if forceLeft > fThresh or forceRight > fThresh:
+                    print "Error!! Force threshold exceed Left:%f,%f, Right:%f,%f" %\
+                    (forceLeft, fThresh, forceRight, fThresh)
                     fail = 1
 
             if fail:
-                print "Error!! Force threshold exceed Left:%f,%f, Right:%f,%f" %\
-                (forceLeft, fThresh['left'][i,0], forceRight, fThresh['right'][i,0])
                 threshInd = i
                 break
 

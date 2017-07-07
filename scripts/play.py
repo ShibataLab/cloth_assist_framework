@@ -13,6 +13,7 @@ import rospy
 import argparse
 import numpy as np
 import baxter_interface
+import cPickle as pickle
 from rl.control import playFile, rewindFile
 
 # main program
@@ -25,8 +26,12 @@ def main():
 
     # add arguments to parser
     parser.add_argument('-f', '--fileName', type = str, help = 'Output Joint Angle Filename')
-    parser.add_argument('-t', '--thresh', type = float, default = 0,
-                        help = 'Force Threshold for fail detect', )
+    parser.add_argument('-m', '--threshMode', type = int, default = 0,
+                        help = 'Force Threshold for fail detect')
+    parser.add_argument('-t', '--threshVal', type = float, default = 15.0,
+                        help = 'Force Threshold for fail detect')
+    parser.add_argument('-s', '--saveName', type = str, default = 'fData',
+                        help = 'Filename to save force data')
 
     # parsing arguments
     args = parser.parse_args(rospy.myargv()[1:])
@@ -54,17 +59,13 @@ def main():
     print("[Baxter] Enabling Robot")
     rs.enable()
 
-    # set the force threshold if given
-    if args.thresh:
-        forceThresh = args.thresh
-
     # if optional argument is given then only play mode is run
     if args.fileName:
         # open and read file
         data = np.genfromtxt(args.fileName, delimiter=',', names=True)
         keys = list(data.dtype.names)
         data = data.view(np.float).reshape(data.shape + (-1,))
-        playFile(data, keys, threshMode=args.thresh, fThresh=10)
+        threshInd, fData = playFile(data, keys, threshMode=args.threshMode, fThresh=args.threshVal)
 
     # if no arguments are given then it will run in sync mode
     else:
@@ -104,7 +105,7 @@ def main():
                     data = np.genfromtxt(playbackFilename, delimiter=',', names=True)
                     keys = data.dtype.names
                     data = data.view(np.float).reshape(data.shape + (-1,))
-                    playFile(data, keys, threshMode=args.thresh, fThresh=15)
+                    threshInd, fData = playFile(data, keys, threshMode=args.threshMode, fThresh=args.threshVal)
 
                 # send the stop playing message
                 socket.send("StoppedPlaying")
@@ -115,6 +116,8 @@ def main():
 
     # clean shutdown
     cleanShutdown()
+    print 'Max Force: %f' % (fData['left'].max())
+    pickle.dump(fData,open('%s.p' % (args.saveName),'wb'))
     print("[Baxter] Done")
 
 if __name__ == '__main__':
