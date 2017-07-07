@@ -237,7 +237,7 @@ def processAll(fileName, savePath, plotFlag, startTime, stopTime, nSamples, join
 
     if nSamples != 0:
         # filter the torque and force data
-        eeInd = [27:30]+[33:36]
+        eeInd = range(27,30)+range(33,36)
         eeData[:,eeInd] = moving_average(eeData[:,eeInd], n=20)
         torqueData[:,15:] = moving_average(torqueData[:,15:], n=10)
 
@@ -264,8 +264,8 @@ def processAll(fileName, savePath, plotFlag, startTime, stopTime, nSamples, join
                    header=torqueHeader, comments='')
 
         # process the force data
-        forceThresh = {'left': np.atleast_2d(np.linalg.norm(moving_average(eeData[:,27:30], n=20),axis=1)).T,
-                       'right': np.atleast_2d(np.linalg.norm(moving_average(eeData[:,33:36], n=20),axis=1)).T}
+        forceThresh = {'left': np.atleast_2d(np.linalg.norm(eeData[:,27:30],axis=1)).T,
+                       'right': np.atleast_2d(np.linalg.norm(eeData[:,33:36],axis=1)).T}
         pickle.dump(forceThresh,open('%sThresh.p' % (savePath),'wb'))
 
 def main():
