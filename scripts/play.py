@@ -65,7 +65,7 @@ def main():
         data = np.genfromtxt(args.fileName, delimiter=',', names=True)
         keys = list(data.dtype.names)
         data = data.view(np.float).reshape(data.shape + (-1,))
-        threshInd, fData = playFile(data, keys, threshMode=args.threshMode, fThresh=args.threshVal)
+        threshInd, fData, pData = playFile(data, keys, threshMode=args.threshMode, fThresh=args.threshVal)
 
     # if no arguments are given then it will run in sync mode
     else:
@@ -105,7 +105,7 @@ def main():
                     data = np.genfromtxt(playbackFilename, delimiter=',', names=True)
                     keys = data.dtype.names
                     data = data.view(np.float).reshape(data.shape + (-1,))
-                    threshInd, fData = playFile(data, keys, threshMode=args.threshMode, fThresh=args.threshVal)
+                    threshInd, fData, pData = playFile(data, keys, threshMode=args.threshMode, fThresh=args.threshVal)
 
                 # send the stop playing message
                 socket.send("StoppedPlaying")
@@ -117,7 +117,8 @@ def main():
     # clean shutdown
     cleanShutdown()
     print 'Max Force: %f' % (fData['left'].max())
-    pickle.dump(fData,open('%s.p' % (args.saveName),'wb'))
+    pickle.dump(fData,open('%sForce.p' % (args.saveName),'wb'))
+    pickle.dump(pData,open('%sPower.p' % (args.saveName),'wb'))
     print("[Baxter] Done")
 
 if __name__ == '__main__':

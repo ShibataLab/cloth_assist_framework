@@ -43,6 +43,7 @@ def playFile(data, keys, threshMode=0, fThresh=None,
 
     # create numpy array for forces
     fData = {'left':np.zeros(data.shape[0]),'right':np.zeros(data.shape[0])}
+    pData = {'left':np.zeros(data.shape[0]),'right':np.zeros(data.shape[0])}
 
     # move to start position and start time variable
     print("[Baxter] Moving to Start Position")
@@ -52,8 +53,10 @@ def playFile(data, keys, threshMode=0, fThresh=None,
     startTime = rospy.get_time()
 
     # create buffers for left and right force
-    leftBuffer = []
-    rightBuffer = []
+    lFBuf = []
+    rFBuf = []
+    lPBuf = []
+    rPBuf = []
     nSamples = data.shape[0]
 
     # play trajectory
@@ -64,24 +67,43 @@ def playFile(data, keys, threshMode=0, fThresh=None,
         sys.stdout.flush()
 
         # obtain the end effector efforts
+        tL = armLeft.joint_efforts()
+        tR = armRight.joint_efforts()
+        vL = armLeft.joint_velocities()
+        vR = armRight.joint_velocities()
         fL = armLeft.endpoint_effort()['force']
         fR = armRight.endpoint_effort()['force']
-        fLeftRaw = np.linalg.norm([fL.x,fL.y,fL.z])
-        fRightRaw = np.linalg.norm([fR.x,fR.y,fR.z])
+
+        fLRaw = np.linalg.norm([fL.x,fL.y,fL.z])
+        fRRaw = np.linalg.norm([fR.x,fR.y,fR.z])
+
+        pLRaw = 0
+        pRRaw = 0
+        for lName,rName in zip(vL.keys(),vR.keys()):
+            if vL[lName]*tL[lName] > 0:
+                pLRaw += vL[lName]*tL[lName]
+            if vR[rName]*tR[rName] > 0:
+                pRRaw += vR[rName]*tR[rName]
 
         # append to buffer and compute moving average
-        leftBuffer.append(fLeftRaw)
-        rightBuffer.append(fRightRaw)
+        lFBuf.append(fLRaw)
+        rFBuf.append(fRRaw)
+        lPBuf.append(pLRaw)
+        rPBuf.append(pRRaw)
         if i >= bufferLength:
-            leftBuffer.pop(0)
-            rightBuffer.pop(0)
+            lFBuf.pop(0)
+            rFBuf.pop(0)
+            lPBuf.pop(0)
+            rPBuf.pop(0)
 
-        forceLeft = np.asarray(leftBuffer).mean()
-        forceRight = np.asarray(rightBuffer).mean()
+        forceLeft = np.asarray(lFBuf).mean()
+        forceRight = np.asarray(rFBuf).mean()
+        powerLeft = np.asarray(lPBuf).mean()
+        powerRight = np.asarray(rPBuf).mean()
         fData['left'][i] = forceLeft
         fData['right'][i] = forceRight
-
-        print armLeft.commanded_efforts()
+        pData['left'][i] = powerLeft
+        pData['right'][i] = powerRight
 
         # check for force thresholds
         if threshMode and (forceLeft > fPass or forceRight > fPass):
@@ -123,7 +145,7 @@ def playFile(data, keys, threshMode=0, fThresh=None,
 
     # return True if there is clean exit
     print
-    return threshInd, fData
+    return threshInd, fData, pData
 
 def rewindFile(data, keys, threshInd):
     # initialize left, right objects from Limb class
