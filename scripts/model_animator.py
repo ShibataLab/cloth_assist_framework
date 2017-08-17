@@ -41,7 +41,7 @@ class ModelAnimator(object):
         self.startMotion = False
 
         # visualize the bgplvm latent space
-        self.maxPoints = 100
+        self.maxPoints = 1000
         self.plotVariance = True
         scales = self.model.kern.input_sensitivity(summarize=False)
         self.plotIndices = np.argsort(scales)[-2:]

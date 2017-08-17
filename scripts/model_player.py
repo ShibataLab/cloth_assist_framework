@@ -28,6 +28,7 @@ right_names = joint_names[12:18]
 
 RED = 90
 GREEN = 50
+MAXPOINTS = 400
 
 class ModelAnimator(object):
     def __init__(self):
@@ -58,7 +59,7 @@ class ModelAnimator(object):
         self.startMotion = False
 
         # visualize the bgplvm latent space
-        self.maxPoints = 100
+        self.maxPoints = MAXPOINTS
         self.plotVariance = True
         scales = self.model.kern.input_sensitivity(summarize=False)
         self.plotIndices = np.argsort(scales)[-2:]
