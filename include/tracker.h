@@ -52,8 +52,8 @@
 #include <kinect2_bridge/kinect2_definitions.h>
 
 // Preprocessor directives
-#define SMIN 20
-#define VMIN 10
+#define SMIN 5
+#define VMIN 5
 #define VMAX 256
 
 // Tracker class

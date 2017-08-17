@@ -264,8 +264,8 @@ void Tracker::clothTracker()
   size_t frameCount = 0;
 
   // create named windows for displaying color and backprojection images
-  // cv::namedWindow("Color");
-  // cv::namedWindow("Backproj");
+  cv::namedWindow("Color");
+  cv::namedWindow("Backproj");
 
   // pcl initialization
   // pcl::visualization::CloudViewer viewer("Cloth Point Cloud");
@@ -321,8 +321,8 @@ void Tracker::clothTracker()
       _pubPointCloud.publish(_cloudCentered);
 
       // show image
-      // cv::imshow("Color", color);
-      // cv::imshow("Backproj", backproj);
+      cv::imshow("Color", color);
+      cv::imshow("Backproj", backproj);
 
       // display point cloud
       // if (_cloud->size() > 0)
